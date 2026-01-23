@@ -5,17 +5,33 @@ from prophet import Prophet
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 from sklearn.preprocessing import MinMaxScaler
+import logging
+
+# Suppress TensorFlow warnings
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 def forecast_prophet(df, periods=30):
     """
     Forecast future prices using Facebook Prophet model.
     Accepts DataFrame with date index and 'close' column.
     Returns DataFrame with 'ds', 'yhat', 'yhat_lower', 'yhat_upper'.
-    Prophet is well-suited for data with strong seasonality:contentReference[oaicite:3]{index=3}.
+    Prophet is well-suited for data with strong seasonality.
     """
-    df_prophet = df.reset_index().rename(columns={'date': 'ds', 'close': 'y'})
+    if df.empty or len(df) < 2:
+        # Return empty DataFrame with expected columns if not enough data
+        return pd.DataFrame(columns=['ds','yhat','yhat_lower','yhat_upper'])
+
+    df_prophet = df.reset_index()
+    # Handle index name variation (if index was unnamed, reset_index created 'index')
+    date_col = 'date' if 'date' in df_prophet.columns else 'index'
+    df_prophet = df_prophet.rename(columns={date_col: 'ds', 'close': 'y'})
+
+    # Disable stdout logging from Prophet
+    logging.getLogger('cmdstanpy').setLevel(logging.WARNING)
+
     model = Prophet(daily_seasonality=True)  # add seasonality
-    model.fit(df_prophet)  # Prophet model (additive seasonal):contentReference[oaicite:4]{index=4}
+    model.fit(df_prophet)  # Prophet model (additive seasonal)
     future = model.make_future_dataframe(periods=periods)
     forecast = model.predict(future)
     return forecast[['ds','yhat','yhat_lower','yhat_upper']]
@@ -26,20 +42,41 @@ def forecast_lstm(df, periods=30, n_steps=60):
     Accepts DataFrame with date index and 'close' column.
     Returns DataFrame with 'ds' and 'yhat'.
     """
+    if df.empty:
+        return pd.DataFrame(columns=['ds', 'yhat'])
+
     # Prepare data
     df_lstm = df.reset_index()
-    df_lstm['date'] = pd.to_datetime(df_lstm['date'])
+    # Handle index name variation
+    date_col = 'date' if 'date' in df_lstm.columns else 'index'
+    df_lstm['date'] = pd.to_datetime(df_lstm[date_col])
     series = df_lstm['close'].values
+
+    # Adjust n_steps if data is too short
+    # We need at least n_steps + 1 data points to train (X -> y)
+    if len(series) <= n_steps:
+        n_steps = max(1, len(series) - 5)
+        if n_steps < 1:
+            # Not enough data to train
+             return pd.DataFrame(columns=['ds', 'yhat'])
+
     # Scale data to [0,1]
     scaler = MinMaxScaler()
     series_scaled = scaler.fit_transform(series.reshape(-1,1))
+
     # Create sequences of length n_steps
     X, y = [], []
     for i in range(n_steps, len(series_scaled)):
         X.append(series_scaled[i-n_steps:i, 0])
         y.append(series_scaled[i, 0])
+
     X, y = np.array(X), np.array(y)
+
+    if len(X) == 0:
+         return pd.DataFrame(columns=['ds', 'yhat'])
+
     X = X.reshape((X.shape[0], X.shape[1], 1))
+
     # Build LSTM model
     model = Sequential([
         LSTM(50, input_shape=(n_steps, 1)),
@@ -47,15 +84,21 @@ def forecast_lstm(df, periods=30, n_steps=60):
     ])
     model.compile(optimizer='adam', loss='mse')
     model.fit(X, y, epochs=5, batch_size=16, verbose=0)
+
     # Forecast future values
     forecast_input = series_scaled[-n_steps:].reshape(1, n_steps, 1)
     preds = []
+
     for _ in range(periods):
-        pred_scaled = model.predict(forecast_input)[0][0]
+        # Predict one step
+        pred_scaled = model.predict(forecast_input, verbose=0)[0][0]
         preds.append(pred_scaled)
-        # update input for next prediction
-        forecast_input = np.append(forecast_input[:,1:,:], [[[pred_scaled]]], axis=1)
+        # Update input for next prediction: remove first element, append new prediction
+        new_input = np.array([[[pred_scaled]]])
+        forecast_input = np.concatenate((forecast_input[:,1:,:], new_input), axis=1)
+
     preds = scaler.inverse_transform(np.array(preds).reshape(-1,1)).flatten()
+
     # Build result DataFrame
     last_date = pd.to_datetime(df_lstm['date'].iloc[-1])
     future_dates = [last_date + pd.Timedelta(days=i) for i in range(1, periods+1)]
