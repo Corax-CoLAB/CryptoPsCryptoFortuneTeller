@@ -15,6 +15,10 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     calculate_macd,
     calculate_bollinger_bands,
     compute_volatility,
+    get_trending_coins,
+    get_current_price,
+    calculate_backtest,
+    get_batch_historical_prices,
 )
 from modules.cryptop_crypto_fortune_teller_models import (
     forecast_prophet,
@@ -130,10 +134,27 @@ with st.sidebar:
         st.write("N/A")
 
     st.markdown("---")
+
+    # Quick Converter
+    st.subheader("💱 Quick Converter")
+    conv_amount = st.number_input("Amount", min_value=0.0, value=1.0, step=0.1)
+    if st.button("Convert"):
+        with st.spinner("Converting..."):
+            prices = get_current_price(coin_id, vs_currencies='usd,eur,btc,eth')
+            if prices and coin_id in prices:
+                p = prices[coin_id]
+                st.write(f"**USD:** ${p.get('usd', 0) * conv_amount:,.2f}")
+                st.write(f"**EUR:** €{p.get('eur', 0) * conv_amount:,.2f}")
+                st.write(f"**BTC:** ₿{p.get('btc', 0) * conv_amount:.6f}")
+                st.write(f"**ETH:** Ξ{p.get('eth', 0) * conv_amount:.6f}")
+            else:
+                st.error("Conversion failed.")
+
+    st.markdown("---")
     st.info("Note: Prediction models are for educational purposes only. Not financial advice.")
 
 # 5) Main Content Tabs
-tab1, tab2, tab3, tab4 = st.tabs(["🔮 Forecast", "📊 Technical Analysis", "🔧 Stats", "🧙 About"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["🔮 Forecast", "📊 Technical Analysis", "🧪 Backtest", "💰 Portfolio", "🔥 Trending", "🔧 Stats", "🧙 About"])
 
 # --- TAB 1: FORECAST ---
 with tab1:
@@ -280,8 +301,192 @@ with tab2:
             fig_macd.update_layout(title="MACD", template="plotly_dark", height=300)
             st.plotly_chart(fig_macd, use_container_width=True)
 
-# --- TAB 3: STATS ---
+        # Correlation Matrix
+        st.markdown("---")
+        st.subheader("🔗 Market Correlation Matrix (90 Days)")
+        with st.spinner("Crunching correlation numbers..."):
+            # Major coins + selected
+            comparison_coins = ['bitcoin', 'ethereum', 'solana', 'ripple', 'cardano']
+            if coin_id not in comparison_coins:
+                comparison_coins.append(coin_id)
+
+            corr_df = get_batch_historical_prices(comparison_coins, days=90)
+            if not corr_df.empty:
+                corr_matrix = corr_df.corr()
+
+                fig_corr = go.Figure(data=go.Heatmap(
+                    z=corr_matrix.values,
+                    x=corr_matrix.columns,
+                    y=corr_matrix.index,
+                    colorscale='Viridis',
+                    zmin=-1, zmax=1
+                ))
+                fig_corr.update_layout(
+                    title="Correlation Heatmap",
+                    template="plotly_dark",
+                    height=500
+                )
+                st.plotly_chart(fig_corr, use_container_width=True)
+            else:
+                st.warning("Could not fetch data for correlation.")
+
+# --- TAB 3: BACKTEST ---
 with tab3:
+    st.subheader("🧪 Strategy Backtester")
+    st.write("Test simple trading strategies on historical data.")
+
+    col_strat1, col_strat2 = st.columns(2)
+    with col_strat1:
+        strategy = st.selectbox("Select Strategy", ["SMA Crossover", "RSI Mean Reversion"])
+    with col_strat2:
+        # Use same OHLC data from Analysis tab if available, else fetch
+        bt_days = st.selectbox("Backtest Period (Days)", [180, 365, 730], index=1)
+
+    if st.button("Run Backtest"):
+        with st.spinner("Simulating trades..."):
+            bt_data = get_historical_prices(coin_id, days=bt_days)
+            if not bt_data.empty:
+                res_df, metrics = calculate_backtest(bt_data, strategy_type=strategy)
+
+                if not res_df.empty:
+                    # Metrics
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("Total Return", f"{metrics['Total Return']:.2%}")
+                    m2.metric("Market Return", f"{metrics['Market Return']:.2%}")
+                    alpha = metrics['Total Return'] - metrics['Market Return']
+                    m3.metric("Alpha", f"{alpha:.2%}", delta_color="normal")
+
+                    # Chart
+                    fig_bt = go.Figure()
+                    fig_bt.add_trace(go.Scatter(x=res_df.index, y=res_df['cumulative_market_returns'], name='Market (Buy & Hold)', line=dict(color='gray', dash='dot')))
+                    fig_bt.add_trace(go.Scatter(x=res_df.index, y=res_df['cumulative_strategy_returns'], name='Strategy', line=dict(color='#00CC96', width=2)))
+                    fig_bt.update_layout(title=f"Equity Curve - {strategy}", template="plotly_dark", yaxis_title="Growth Factor (1 = Initial)", xaxis_title="Date")
+                    st.plotly_chart(fig_bt, use_container_width=True)
+
+                    with st.expander("Trade Log (Signals)"):
+                        st.dataframe(res_df[['close', 'signal', 'strategy_returns']].tail(50))
+                else:
+                    st.error("Backtest failed.")
+            else:
+                st.error("No data for backtest.")
+
+# --- TAB 4: PORTFOLIO ---
+with tab4:
+    st.subheader("💰 Portfolio Tracker")
+    st.write("Track your crypto holdings in real-time.")
+
+    # Initialize session state for portfolio
+    if 'portfolio' not in st.session_state:
+        st.session_state.portfolio = []
+
+    # Add coin form
+    with st.expander("Add Asset"):
+        with st.form("add_asset_form"):
+            # Use the global coin list
+            p_coin = st.selectbox("Coin", options)
+            p_amount = st.number_input("Amount Owned", min_value=0.0, step=0.01)
+            p_buy_price = st.number_input("Avg Buy Price (USD)", min_value=0.0, step=0.01)
+            submitted = st.form_submit_button("Add to Portfolio")
+
+            if submitted:
+                p_coin_id = mapping[p_coin]
+                p_symbol = p_coin.split('(')[1].replace(')', '')
+                st.session_state.portfolio.append({
+                    'id': p_coin_id,
+                    'name': p_coin,
+                    'symbol': p_symbol,
+                    'amount': p_amount,
+                    'buy_price': p_buy_price
+                })
+                st.success(f"Added {p_amount} {p_symbol}")
+
+    if st.session_state.portfolio:
+        # Calculate values
+        port_data = []
+        total_value = 0
+        total_cost = 0
+
+        # Get current prices for all coins in portfolio
+        p_ids = list(set([item['id'] for item in st.session_state.portfolio]))
+        curr_prices = get_current_price(p_ids)
+
+        for item in st.session_state.portfolio:
+            cid = item['id']
+            c_price = curr_prices.get(cid, {}).get('usd', 0) if curr_prices else 0
+            curr_val = item['amount'] * c_price
+            cost_val = item['amount'] * item['buy_price']
+            pnl = curr_val - cost_val
+            pnl_pct = (pnl / cost_val * 100) if cost_val > 0 else 0
+
+            total_value += curr_val
+            total_cost += cost_val
+
+            port_data.append({
+                'Coin': item['name'],
+                'Amount': item['amount'],
+                'Current Price': c_price,
+                'Value': curr_val,
+                'PnL ($)': pnl,
+                'PnL (%)': pnl_pct
+            })
+
+        df_port = pd.DataFrame(port_data)
+
+        # Summary Metrics
+        col_p1, col_p2, col_p3 = st.columns(3)
+        col_p1.metric("Total Portfolio Value", f"${total_value:,.2f}")
+        total_pnl = total_value - total_cost
+        total_pnl_pct = (total_pnl / total_cost * 100) if total_cost > 0 else 0
+        col_p2.metric("Total PnL", f"${total_pnl:,.2f}", delta=f"{total_pnl_pct:.2f}%")
+        col_p3.metric("Holdings Count", len(df_port))
+
+        st.dataframe(df_port.style.format({
+            'Current Price': "${:.2f}",
+            'Value': "${:.2f}",
+            'PnL ($)': "${:.2f}",
+            'PnL (%)': "{:.2f}%"
+        }))
+
+        # Allocation Pie Chart
+        fig_pie = go.Figure(data=[go.Pie(labels=df_port['Coin'], values=df_port['Value'], hole=.3)])
+        fig_pie.update_layout(title="Portfolio Allocation", template="plotly_dark")
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+        if st.button("Clear Portfolio"):
+            st.session_state.portfolio = []
+            st.experimental_rerun()
+
+    else:
+        st.info("Your portfolio is empty. Add some assets above!")
+
+# --- TAB 5: TRENDING ---
+with tab5:
+    st.subheader("🔥 Trending Now")
+    st.write("Top 7 coins searched by users on CoinGecko in the last 24 hours.")
+
+    trending_coins = get_trending_coins()
+
+    if trending_coins:
+        cols = st.columns(4) # Display in rows of 4
+        for i, coin in enumerate(trending_coins):
+            item = coin['item']
+            c_rank = item.get('market_cap_rank', 'N/A')
+            c_name = item.get('name')
+            c_sym = item.get('symbol')
+            c_thumb = item.get('large')
+            c_price_btc = item.get('price_btc')
+
+            with cols[i % 4]:
+                st.image(c_thumb, width=60)
+                st.markdown(f"**{c_name} ({c_sym})**")
+                st.caption(f"Rank: #{c_rank}")
+                st.write(f"Price (BTC): {c_price_btc:.8f}")
+                st.markdown("---")
+    else:
+        st.error("Could not load trending coins.")
+
+# --- TAB 6: STATS ---
+with tab6:
     st.subheader("Volatility Analysis")
     with st.spinner("Calculating volatility..."):
         # Fetch data for volatility (using 180 days for a good trend view)
@@ -358,8 +563,8 @@ with tab3:
     else:
         st.info("Metrics unavailable for this coin.")
 
-# --- TAB 4: ABOUT ---
-with tab4:
+# --- TAB 7: ABOUT ---
+with tab7:
     st.markdown("""
     ### 🧙 About Crypto P's Crypto Fortune Teller
 
@@ -369,6 +574,10 @@ with tab4:
     *   **Prophet Model:** developed by Facebook, excellent for detecting seasonality and trends.
     *   **LSTM (Long Short-Term Memory):** A Recurrent Neural Network designed for sequence prediction.
     *   **Technical Analysis:** Real-time calculation of RSI, MACD, and Bollinger Bands.
+    *   **Market Correlation:** See how your coin moves relative to the market leaders.
+    *   **Strategy Backtester:** Test simple trading strategies (SMA, RSI) on historical data.
+    *   **Portfolio Tracker:** Track the value and performance of your crypto holdings.
+    *   **Trending Dashboard:** See what's hot in the crypto world right now.
     *   **Community Stats:** Gauge the sentiment and developer activity.
 
     ---
