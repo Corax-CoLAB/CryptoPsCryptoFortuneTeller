@@ -14,6 +14,7 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     calculate_rsi,
     calculate_macd,
     calculate_bollinger_bands,
+    compute_volatility,
 )
 from modules.cryptop_crypto_fortune_teller_models import (
     forecast_prophet,
@@ -281,6 +282,57 @@ with tab2:
 
 # --- TAB 3: STATS ---
 with tab3:
+    st.subheader("Volatility Analysis")
+    with st.spinner("Calculating volatility..."):
+        # Fetch data for volatility (using 180 days for a good trend view)
+        vol_ohlc = get_historical_ohlc(coin_id, days=180)
+        if vol_ohlc.empty:
+            vol_ohlc = get_historical_prices(coin_id, days=180)
+            if not vol_ohlc.empty:
+                # Ensure we have required columns if falling back to simple prices
+                if 'close' in vol_ohlc.columns and 'high' not in vol_ohlc.columns:
+                     vol_ohlc['high'] = vol_ohlc['close']
+                     vol_ohlc['low'] = vol_ohlc['close']
+
+        if not vol_ohlc.empty:
+            vol_metrics = compute_volatility(vol_ohlc)
+
+            if not vol_metrics.empty:
+                fig_vol = make_subplots(specs=[[{"secondary_y": True}]])
+
+                # Rolling Std Dev
+                fig_vol.add_trace(go.Scatter(
+                    x=vol_metrics.index,
+                    y=vol_metrics['rolling_std'],
+                    name='Rolling Std Dev (14d)',
+                    line=dict(color='#AB63FA')
+                ), secondary_y=False)
+
+                # ATR
+                if 'ATR' in vol_metrics.columns:
+                    fig_vol.add_trace(go.Scatter(
+                        x=vol_metrics.index,
+                        y=vol_metrics['ATR'],
+                        name='Average True Range (ATR)',
+                        line=dict(color='#00CC96', dash='dot')
+                    ), secondary_y=True)
+
+                fig_vol.update_layout(
+                    title="Volatility Metrics (180 Days)",
+                    template="plotly_dark",
+                    height=400,
+                    hovermode="x unified",
+                    yaxis_title="Std Dev",
+                    yaxis2_title="ATR"
+                )
+                st.plotly_chart(fig_vol, use_container_width=True)
+            else:
+                st.warning("Not enough data to calculate volatility metrics.")
+        else:
+            st.warning("Could not fetch data for volatility analysis.")
+
+    st.markdown("---")
+
     st.subheader("Community & Developer Statistics")
 
     with st.spinner("Gathering intel..."):
