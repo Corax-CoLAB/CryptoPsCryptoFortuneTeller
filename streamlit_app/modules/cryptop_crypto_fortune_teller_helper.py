@@ -174,3 +174,116 @@ def calculate_bollinger_bands(df, window=20, num_std=2):
     upper = sma + (std * num_std)
     lower = sma - (std * num_std)
     return pd.DataFrame({'B_Upper': upper, 'B_Lower': lower, 'SMA': sma})
+
+@st.cache_data(ttl=3600)
+def get_trending_coins():
+    """
+    Fetch top 7 trending coins on CoinGecko.
+    """
+    try:
+        trending = cg.get_search_trending()
+        return trending.get('coins', [])
+    except Exception as e:
+        st.error(f"Error fetching trending coins: {e}")
+        return []
+
+@st.cache_data(ttl=60)
+def get_current_price(coin_ids, vs_currencies='usd,eur,btc,eth'):
+    """
+    Fetch current prices for a list of coin IDs.
+    """
+    if isinstance(coin_ids, list):
+        coin_ids = ','.join(coin_ids)
+    try:
+        prices = cg.get_price(ids=coin_ids, vs_currencies=vs_currencies)
+        return prices
+    except Exception as e:
+        st.error(f"Error fetching prices: {e}")
+        return {}
+
+def calculate_backtest(df, strategy_type='SMA Crossover'):
+    """
+    Perform a simple backtest on the provided DataFrame.
+    Returns the dataframe with returns and a metrics dictionary.
+    """
+    if df.empty or 'close' not in df.columns:
+        return pd.DataFrame(), {}
+
+    df = df.copy()
+    signals = pd.DataFrame(index=df.index)
+    signals['signal'] = 0.0
+
+    # 1. Generate Signals
+    if strategy_type == 'SMA Crossover':
+        # Simple Moving Average Crossover (Golden Cross)
+        short_window = 20
+        long_window = 50
+        df['short_mavg'] = df['close'].rolling(window=short_window, min_periods=1).mean()
+        df['long_mavg'] = df['close'].rolling(window=long_window, min_periods=1).mean()
+
+        # Create signal: 1 when short > long, else 0
+        signals['signal'] = np.where(df['short_mavg'] > df['long_mavg'], 1.0, 0.0)
+
+    elif strategy_type == 'RSI Mean Reversion':
+        # Buy if RSI < 30, Sell if RSI > 70
+        rsi = calculate_rsi(df)
+
+        # Iterative approach to maintain state
+        position = 0
+        pos_list = []
+        for r in rsi:
+            if r < 30:
+                position = 1
+            elif r > 70:
+                position = 0
+            pos_list.append(position)
+        signals['signal'] = pos_list
+
+    # 2. Calculate Returns
+    # Market Returns
+    df['returns'] = df['close'].pct_change()
+
+    # Add signal to output df for visualization
+    df['signal'] = signals['signal']
+
+    # Strategy Returns = Position(t-1) * Return(t)
+    df['strategy_returns'] = signals['signal'].shift(1) * df['returns']
+
+    # 3. Metrics
+    # Fill NaN (first row) with 0
+    df['strategy_returns'] = df['strategy_returns'].fillna(0)
+    df['returns'] = df['returns'].fillna(0)
+
+    df['cumulative_market_returns'] = (1 + df['returns']).cumprod()
+    df['cumulative_strategy_returns'] = (1 + df['strategy_returns']).cumprod()
+
+    total_return = df['cumulative_strategy_returns'].iloc[-1] - 1
+    market_return = df['cumulative_market_returns'].iloc[-1] - 1
+
+    metrics = {
+        'Total Return': total_return,
+        'Market Return': market_return
+    }
+
+    return df, metrics
+
+@st.cache_data(ttl=3600)
+def get_batch_historical_prices(coin_ids, days=90):
+    """
+    Fetch historical prices for multiple coins and return a combined DataFrame.
+    """
+    combined_df = pd.DataFrame()
+    for cid in coin_ids:
+        try:
+            # Re-use existing function but we need to bypass cache if needed or just use it.
+            # It's cached, so it's fast.
+            df = get_historical_prices(cid, days=days)
+            if not df.empty:
+                df = df.rename(columns={'close': cid})
+                if combined_df.empty:
+                    combined_df = df
+                else:
+                    combined_df = combined_df.join(df, how='outer')
+        except Exception:
+            pass
+    return combined_df
