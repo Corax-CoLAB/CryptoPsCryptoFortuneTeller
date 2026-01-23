@@ -113,12 +113,12 @@ with st.sidebar:
     # Create a mapping
     mapping = {f"{row['name']} ({row['symbol'].upper()})": row['id'] for _, row in df_coins.iterrows()}
 
-    selected_option = st.selectbox("Select Cryptocurrency", options, index=0)
+    selected_option = st.selectbox("Select Cryptocurrency", options, index=0, help="Search and select the cryptocurrency you want to analyze.")
     coin_id = mapping[selected_option]
 
     # Model Selection
-    model_choice = st.selectbox("Forecast Model", ["Prophet", "LSTM"])
-    forecast_days = st.slider("Forecast Days", 7, 90, 30)
+    model_choice = st.selectbox("Forecast Model", ["Prophet", "LSTM"], help="Prophet: Best for capturing seasonality and trends.\nLSTM: Deep learning model for complex pattern recognition.")
+    forecast_days = st.slider("Forecast Days", 7, 90, 30, help="Choose how far into the future you want to predict prices (up to 90 days).")
 
     st.markdown("---")
 
@@ -137,7 +137,7 @@ with st.sidebar:
 
     # Quick Converter
     st.subheader("💱 Quick Converter")
-    conv_amount = st.number_input("Amount", min_value=0.0, value=1.0, step=0.1)
+    conv_amount = st.number_input("Amount to Convert", min_value=0.0, value=1.0, step=0.1, help="Enter the amount of cryptocurrency to convert.")
     if st.button("Convert"):
         with st.spinner("Converting..."):
             prices = get_current_price(coin_id, vs_currencies='usd,eur,btc,eth')
@@ -242,7 +242,7 @@ with tab1:
 with tab2:
     st.subheader("Technical Analysis")
 
-    days_back = st.radio("Analysis Period", [90, 180, 365], index=0, horizontal=True)
+    days_back = st.radio("Analysis Period", [90, 180, 365], index=0, horizontal=True, help="Select the historical time range for technical analysis charts.")
 
     with st.spinner("Analyzing market patterns..."):
         # Fetch OHLC for better analysis
@@ -337,10 +337,10 @@ with tab3:
 
     col_strat1, col_strat2 = st.columns(2)
     with col_strat1:
-        strategy = st.selectbox("Select Strategy", ["SMA Crossover", "RSI Mean Reversion"])
+        strategy = st.selectbox("Select Strategy", ["SMA Crossover", "RSI Mean Reversion"], help="SMA Crossover: Buy when short-term average crosses above long-term.\nRSI Mean Reversion: Buy when oversold, sell when overbought.")
     with col_strat2:
         # Use same OHLC data from Analysis tab if available, else fetch
-        bt_days = st.selectbox("Backtest Period (Days)", [180, 365, 730], index=1)
+        bt_days = st.selectbox("Backtest Period (Days)", [180, 365, 730], index=1, help="The duration of historical data to test the strategy against.")
 
     if st.button("Run Backtest"):
         with st.spinner("Simulating trades..."):
@@ -383,9 +383,9 @@ with tab4:
     with st.expander("Add Asset"):
         with st.form("add_asset_form"):
             # Use the global coin list
-            p_coin = st.selectbox("Coin", options)
-            p_amount = st.number_input("Amount Owned", min_value=0.0, step=0.01)
-            p_buy_price = st.number_input("Avg Buy Price (USD)", min_value=0.0, step=0.01)
+            p_coin = st.selectbox("Coin", options, help="Select the coin to add to your portfolio.")
+            p_amount = st.number_input("Amount Owned", min_value=0.0, step=0.01, help="The total quantity of coins you hold.")
+            p_buy_price = st.number_input("Avg Buy Price (USD)", min_value=0.0, step=0.01, help="Your average purchase price per coin in USD.")
             submitted = st.form_submit_button("Add to Portfolio")
 
             if submitted:
