@@ -1,9 +1,10 @@
 # cryptop_crypto_fortune_teller_models.py
 import pandas as pd
 import numpy as np
+import streamlit as st
 from prophet import Prophet
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.layers import LSTM, Dense, Input
 from sklearn.preprocessing import MinMaxScaler
 import logging
 
@@ -11,6 +12,7 @@ import logging
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
+@st.cache_data(ttl=3600)
 def forecast_prophet(df, periods=30):
     """
     Forecast future prices using Facebook Prophet model.
@@ -36,6 +38,7 @@ def forecast_prophet(df, periods=30):
     forecast = model.predict(future)
     return forecast[['ds','yhat','yhat_lower','yhat_upper']]
 
+@st.cache_data(ttl=3600)
 def forecast_lstm(df, periods=30, n_steps=60):
     """
     Forecast future prices using a simple LSTM neural network.
@@ -79,7 +82,8 @@ def forecast_lstm(df, periods=30, n_steps=60):
 
     # Build LSTM model
     model = Sequential([
-        LSTM(50, input_shape=(n_steps, 1)),
+        Input(shape=(n_steps, 1)),
+        LSTM(50),
         Dense(1)
     ])
     model.compile(optimizer='adam', loss='mse')
