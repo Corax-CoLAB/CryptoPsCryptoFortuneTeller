@@ -228,16 +228,14 @@ def calculate_backtest(df, strategy_type='SMA Crossover'):
         # Buy if RSI < 30, Sell if RSI > 70
         rsi = calculate_rsi(df)
 
-        # Iterative approach to maintain state
-        position = 0
-        pos_list = []
-        for r in rsi:
-            if r < 30:
-                position = 1
-            elif r > 70:
-                position = 0
-            pos_list.append(position)
-        signals['signal'] = pos_list
+        # Vectorized approach using masking and forward fill
+        signal_series = pd.Series(np.nan, index=rsi.index)
+        signal_series[rsi < 30] = 1.0
+        signal_series[rsi > 70] = 0.0
+
+        # Forward fill to propagate the last active signal
+        signal_series = signal_series.ffill().fillna(0.0)
+        signals['signal'] = signal_series
 
     # 2. Calculate Returns
     # Market Returns
