@@ -4,6 +4,7 @@ import numpy as np
 from pycoingecko import CoinGeckoAPI
 import streamlit as st
 import requests
+import concurrent.futures
 
 # Initialize CoinGecko client (public demo API)
 cg = CoinGeckoAPI()
@@ -271,18 +272,33 @@ def calculate_backtest(df, strategy_type='SMA Crossover'):
 def get_batch_historical_prices(coin_ids, days=90):
     """
     Fetch historical prices for multiple coins and return a combined DataFrame.
+    Uses concurrent requests to speed up fetching.
     """
     dfs = []
-    for cid in coin_ids:
+
+    def fetch_price(cid):
         try:
             # Re-use existing function but we need to bypass cache if needed or just use it.
             # It's cached, so it's fast.
             df = get_historical_prices(cid, days=days)
             if not df.empty:
                 df = df.rename(columns={'close': cid})
-                dfs.append(df)
+                return df
         except Exception:
             pass
+        return None
+
+    # Use ThreadPoolExecutor for concurrent requests
+    # Limit max_workers to avoid hitting rate limits too hard
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        # Submit all tasks. We maintain the order of futures to match coin_ids
+        futures = [executor.submit(fetch_price, cid) for cid in coin_ids]
+
+        # Collect results in order
+        for future in futures:
+            df = future.result()
+            if df is not None:
+                dfs.append(df)
 
     if not dfs:
         return pd.DataFrame()
