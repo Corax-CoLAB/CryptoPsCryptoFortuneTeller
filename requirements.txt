@@ -1,0 +1,8 @@
+streamlit>=1.25.0
+pandas>=2.0.0
+numpy>=1.25.0
+plotly>=5.15.0
+pycoingecko>=2.1.0
+prophet>=1.1.1
+tensorflow>=2.12.0
+scikit-learn>=1.2.0
