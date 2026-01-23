@@ -109,9 +109,9 @@ with st.sidebar:
         st.error("Could not load coin list.")
         st.stop()
 
-    options = [f"{row['name']} ({row['symbol'].upper()})" for _, row in df_coins.iterrows()]
-    # Create a mapping
-    mapping = {f"{row['name']} ({row['symbol'].upper()})": row['id'] for _, row in df_coins.iterrows()}
+    df_coins['display'] = df_coins['name'] + ' (' + df_coins['symbol'].str.upper() + ')'
+    options = df_coins['display'].tolist()
+    mapping = pd.Series(df_coins.id.values, index=df_coins.display).to_dict()
 
     selected_option = st.selectbox("Select Cryptocurrency", options, index=0, help="Search and select the cryptocurrency you want to analyze.")
     coin_id = mapping[selected_option]
