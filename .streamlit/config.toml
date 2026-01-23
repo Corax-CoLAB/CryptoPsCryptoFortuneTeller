@@ -1,9 +1,9 @@
 [theme]
-base="dark"             # or "light"
-primaryColor="#4B0082"  # deep indigo accent
-backgroundColor="#0F0F1A"
-secondaryBackgroundColor="#222233"
-textColor="#E0E0E0"
+base="dark"
+primaryColor="#FF00FF"
+backgroundColor="#0e0018"
+secondaryBackgroundColor="#1f0030"
+textColor="#00FFFF"
 font="sans serif"
 
 [server]
