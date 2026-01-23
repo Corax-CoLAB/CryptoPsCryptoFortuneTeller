@@ -24,6 +24,7 @@ from modules.cryptop_crypto_fortune_teller_models import (
     forecast_prophet,
     forecast_lstm,
 )
+from modules.cryptop_crypto_fortune_teller_styles import apply_custom_css
 
 # 1) Page config
 st.set_page_config(
@@ -33,55 +34,8 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 2) Custom CSS for "Awesome Design"
-st.markdown("""
-<style>
-    /* Main Background */
-    .stApp {
-        background-color: #0e1117;
-        color: #fafafa;
-    }
-    /* Sidebar */
-    [data-testid="stSidebar"] {
-        background-color: #161b22;
-        border-right: 1px solid #4B0082;
-    }
-    /* Custom Headers */
-    h1, h2, h3 {
-        color: #E0E0E0;
-    }
-    /* Tabs styling */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #161b22;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding-top: 10px;
-        padding-bottom: 10px;
-        color: #fff;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #4B0082;
-        color: #fff;
-    }
-    /* Metric Cards */
-    [data-testid="stMetricValue"] {
-        font-size: 1.5rem !important;
-        color: #d0d0d0;
-    }
-    [data-testid="stMetricLabel"] {
-        color: #909090;
-    }
-    /* Custom HR */
-    hr {
-        border-color: #4B0082;
-    }
-</style>
-""", unsafe_allow_html=True)
+# 2) Apply Custom CSS for "Awesome Design" - PSYCHEDELIC CARNIVAL THEME
+apply_custom_css()
 
 # 3) Header
 logo_path = "assets/logo.png"
@@ -92,8 +46,8 @@ with col2:
         st.image(logo_path, width=120)
     except:
         st.write("🔮") # Fallback if image missing
-    st.title("Crypto P's Crypto Fortune Teller")
-    st.markdown("<h4 style='text-align: center; color: #a0a0a0;'>Predict Cryptocurrency Prices with Magic (and Math)</h4>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #FFD700; text-shadow: 0 0 10px #FF00FF;'>🎪 Crypto P's 🔮<br>Crypto Fortune Teller</h1>", unsafe_allow_html=True)
+    st.markdown("<h4 style='text-align: center; color: #00FFFF; font-family: Cinzel, serif;'>✨ Peer into the Misty Future of the Blockchain ✨</h4>", unsafe_allow_html=True)
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -185,7 +139,7 @@ with tab1:
                 y=price_df['close'],
                 mode='lines',
                 name='History',
-                line=dict(color='#00CC96')
+                line=dict(color='#00FFFF', width=2)
             ))
 
             # Forecast
@@ -194,7 +148,7 @@ with tab1:
                 y=fv['yhat'],
                 mode='lines',
                 name='Forecast',
-                line=dict(color='#AB63FA', dash='dash')
+                line=dict(color='#FF00FF', dash='dash', width=3)
             ))
 
             # Confidence Intervals (Prophet only)
@@ -211,7 +165,7 @@ with tab1:
                     marker=dict(color="#444"),
                     line=dict(width=0),
                     mode='lines',
-                    fillcolor='rgba(171, 99, 250, 0.2)',
+                    fillcolor='rgba(255, 0, 255, 0.1)',
                     fill='tonexty',
                     showlegend=False
                 ))
@@ -277,27 +231,27 @@ with tab2:
         ))
 
         if not bb_df.empty:
-            fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Upper'], line=dict(color='gray', width=1), name='BB Upper'))
-            fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Lower'], line=dict(color='gray', width=1), name='BB Lower', fill='tonexty', fillcolor='rgba(128,128,128,0.1)'))
-            fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['SMA'], line=dict(color='orange', width=1), name='SMA 20'))
+            fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Upper'], line=dict(color='#bd93f9', width=1), name='BB Upper'))
+            fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Lower'], line=dict(color='#bd93f9', width=1), name='BB Lower', fill='tonexty', fillcolor='rgba(189, 147, 249, 0.1)'))
+            fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['SMA'], line=dict(color='#FFD700', width=1), name='SMA 20'))
 
         fig_main.update_layout(title="Price Action & Bollinger Bands", template="plotly_dark", xaxis_rangeslider_visible=False, height=500)
         st.plotly_chart(fig_main, use_container_width=True)
 
         # Plot 2: RSI
         fig_rsi = go.Figure()
-        fig_rsi.add_trace(go.Scatter(x=rsi.index, y=rsi, name='RSI', line=dict(color='#EF553B')))
-        fig_rsi.add_hline(y=70, line_dash="dot", line_color="red", annotation_text="Overbought")
-        fig_rsi.add_hline(y=30, line_dash="dot", line_color="green", annotation_text="Oversold")
+        fig_rsi.add_trace(go.Scatter(x=rsi.index, y=rsi, name='RSI', line=dict(color='#FF4500', width=2)))
+        fig_rsi.add_hline(y=70, line_dash="dot", line_color="#FF0000", annotation_text="Overbought")
+        fig_rsi.add_hline(y=30, line_dash="dot", line_color="#00FF00", annotation_text="Oversold")
         fig_rsi.update_layout(title="Relative Strength Index (RSI)", template="plotly_dark", height=300, yaxis_range=[0, 100])
         st.plotly_chart(fig_rsi, use_container_width=True)
 
         # Plot 3: MACD
         if not macd_df.empty:
             fig_macd = make_subplots(specs=[[{"secondary_y": False}]])
-            fig_macd.add_trace(go.Bar(x=macd_df.index, y=macd_df['Histogram'], name='Histogram', marker_color='gray'))
-            fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['MACD'], name='MACD', line=dict(color='#00CC96')))
-            fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['Signal'], name='Signal', line=dict(color='#EF553B')))
+            fig_macd.add_trace(go.Bar(x=macd_df.index, y=macd_df['Histogram'], name='Histogram', marker_color='#444'))
+            fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['MACD'], name='MACD', line=dict(color='#00FFFF')))
+            fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['Signal'], name='Signal', line=dict(color='#FF4500')))
             fig_macd.update_layout(title="MACD", template="plotly_dark", height=300)
             st.plotly_chart(fig_macd, use_container_width=True)
 
@@ -358,8 +312,8 @@ with tab3:
 
                     # Chart
                     fig_bt = go.Figure()
-                    fig_bt.add_trace(go.Scatter(x=res_df.index, y=res_df['cumulative_market_returns'], name='Market (Buy & Hold)', line=dict(color='gray', dash='dot')))
-                    fig_bt.add_trace(go.Scatter(x=res_df.index, y=res_df['cumulative_strategy_returns'], name='Strategy', line=dict(color='#00CC96', width=2)))
+                    fig_bt.add_trace(go.Scatter(x=res_df.index, y=res_df['cumulative_market_returns'], name='Market (Buy & Hold)', line=dict(color='#6272a4', dash='dot')))
+                    fig_bt.add_trace(go.Scatter(x=res_df.index, y=res_df['cumulative_strategy_returns'], name='Strategy', line=dict(color='#00FF00', width=2)))
                     fig_bt.update_layout(title=f"Equity Curve - {strategy}", template="plotly_dark", yaxis_title="Growth Factor (1 = Initial)", xaxis_title="Date")
                     st.plotly_chart(fig_bt, use_container_width=True)
 
@@ -522,7 +476,7 @@ with tab6:
                     x=vol_metrics.index,
                     y=vol_metrics['rolling_std'],
                     name='Rolling Std Dev (14d)',
-                    line=dict(color='#AB63FA')
+                    line=dict(color='#FF00FF')
                 ), secondary_y=False)
 
                 # ATR
@@ -531,7 +485,7 @@ with tab6:
                         x=vol_metrics.index,
                         y=vol_metrics['ATR'],
                         name='Average True Range (ATR)',
-                        line=dict(color='#00CC96', dash='dot')
+                        line=dict(color='#00FFFF', dash='dot')
                     ), secondary_y=True)
 
                 fig_vol.update_layout(
@@ -578,22 +532,29 @@ with tab6:
 # --- TAB 7: ABOUT ---
 with tab7:
     st.markdown("""
-    ### 🧙 About Crypto P's Crypto Fortune Teller
+    <div style='text-align: center;'>
+        <h2>🧙 The Oracle Speaks 🧙</h2>
+        <p style='font-size: 1.2rem; font-family: Cinzel, serif; color: #00FFFF;'>
+            Welcome, seeker of fortune, to the digital carnival of crypto divination!
+        </p>
+    </div>
 
-    This application allows you to peer into the misty future of cryptocurrency prices using advanced machine learning models.
+    This mystical apparatus channels the spirits of the blockchain to reveal glimpses of tomorrow.
 
-    **Features:**
-    *   **Prophet Model:** developed by Facebook, excellent for detecting seasonality and trends.
-    *   **LSTM (Long Short-Term Memory):** A Recurrent Neural Network designed for sequence prediction.
-    *   **Technical Analysis:** Real-time calculation of RSI, MACD, and Bollinger Bands.
-    *   **Market Correlation:** See how your coin moves relative to the market leaders.
-    *   **Strategy Backtester:** Test simple trading strategies (SMA, RSI) on historical data.
-    *   **Portfolio Tracker:** Track the value and performance of your crypto holdings.
-    *   **Trending Dashboard:** See what's hot in the crypto world right now.
-    *   **Community Stats:** Gauge the sentiment and developer activity.
+    ### 🔮 The Tools of Divination
+    *   **The Prophet's Eye:** (Facebook Prophet) Gazes into seasonality and trends.
+    *   **The Neural Crystal Ball:** (LSTM) A deep dreaming network that sees patterns in chaos.
+    *   **Alchemical Analysis:** (RSI, MACD, Bollinger) Transmuting raw data into golden signals.
+    *   **The Star Chart:** (Correlation) How your coin dances with the cosmic giants.
+    *   **Time Travel Trials:** (Backtester) Test your strategies against the ghosts of the past.
+    *   **Treasure Chest:** (Portfolio) Guard your digital gold.
+    *   **Whispers of the Crowd:** (Sentiment) What the masses are chanting in the digital square.
 
     ---
-    *Disclaimer: This tool is for educational purposes only. Cryptocurrency markets are highly volatile and unpredictable. Never invest more than you can afford to lose.*
+    *Disclaimer: The spirits are fickle. This tool is for entertainment and educational purposes only. The future is always in flux. Never wager more than you can afford to lose to the void.*
 
-    © 2025 Crypto P • [cryptop.coraxgardening.se](https://cryptop.coraxgardening.se)
-    """)
+    <div style='text-align: center; margin-top: 20px;'>
+        <p>© 2025 Crypto P • The Digital Mystic</p>
+        <a href="https://cryptop.coraxgardening.se" style='color: #FF00FF; text-decoration: none; font-weight: bold;'>Visit the Temple</a>
+    </div>
+    """, unsafe_allow_html=True)

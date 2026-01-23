@@ -3,11 +3,25 @@
 
 import streamlit as st
 from datetime import datetime
+import sys
+import os
+
+# Ensure modules can be imported
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from modules.cryptop_crypto_fortune_teller_styles import apply_custom_css
+
+# Apply Custom CSS
+apply_custom_css()
 
 st.title("🔮 About Crypto P's Crypto Fortune Teller 🔮")
 
 # Description and credits
 st.markdown("""
+<div style='text-align: center; margin-bottom: 30px;'>
+    <h3 style='font-family: Rye, cursive; color: #FFD700;'>The Digital Carnival of the Future</h3>
+</div>
+
 **Crypto P's Crypto Fortune Teller** is an interactive web app built with Streamlit and Python 3.11.
 It leverages cutting-edge machine learning models and multiple data sources to forecast cryptocurrency prices
 and analyze market volatility and metrics.
