@@ -95,7 +95,7 @@ def forecast_lstm(df, periods=30, n_steps=60):
 
     for _ in range(periods):
         # Predict one step
-        pred_scaled = model.predict(forecast_input, verbose=0)[0][0]
+        pred_scaled = model.predict_on_batch(forecast_input)[0][0]
         preds.append(pred_scaled)
         # Update input for next prediction: remove first element, append new prediction
         new_input = np.array([[[pred_scaled]]])
