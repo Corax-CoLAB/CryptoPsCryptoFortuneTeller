@@ -272,7 +272,7 @@ def get_batch_historical_prices(coin_ids, days=90):
     """
     Fetch historical prices for multiple coins and return a combined DataFrame.
     """
-    combined_df = pd.DataFrame()
+    dfs = []
     for cid in coin_ids:
         try:
             # Re-use existing function but we need to bypass cache if needed or just use it.
@@ -280,10 +280,13 @@ def get_batch_historical_prices(coin_ids, days=90):
             df = get_historical_prices(cid, days=days)
             if not df.empty:
                 df = df.rename(columns={'close': cid})
-                if combined_df.empty:
-                    combined_df = df
-                else:
-                    combined_df = combined_df.join(df, how='outer')
+                dfs.append(df)
         except Exception:
             pass
+
+    if not dfs:
+        return pd.DataFrame()
+
+    # Concatenate all at once along columns (axis=1)
+    combined_df = pd.concat(dfs, axis=1, join='outer')
     return combined_df
