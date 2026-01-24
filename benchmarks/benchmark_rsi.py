@@ -1,3 +1,8 @@
+"""
+Benchmark for RSI Strategy implementations.
+Compares the performance of iterative vs vectorized approaches.
+The vectorized approach is currently used in production.
+"""
 import pandas as pd
 import numpy as np
 import timeit
