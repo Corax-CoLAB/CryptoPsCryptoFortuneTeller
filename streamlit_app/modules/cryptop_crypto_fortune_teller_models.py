@@ -90,16 +90,16 @@ def forecast_lstm(df, periods=30, n_steps=60):
     model.fit(X, y, epochs=5, batch_size=16, verbose=0)
 
     # Forecast future values
-    forecast_input = series_scaled[-n_steps:].reshape(1, n_steps, 1)
+    forecast_input = series_scaled[-n_steps:].reshape(1, n_steps, 1).astype(np.float32)
     preds = []
 
     for _ in range(periods):
         # Predict one step
         pred_scaled = model.predict_on_batch(forecast_input)[0][0]
         preds.append(pred_scaled)
-        # Update input for next prediction: remove first element, append new prediction
-        new_input = np.array([[[pred_scaled]]])
-        forecast_input = np.concatenate((forecast_input[:,1:,:], new_input), axis=1)
+        # Update input for next prediction: shift left and append new prediction
+        forecast_input[:, :-1, :] = forecast_input[:, 1:, :]
+        forecast_input[0, -1, 0] = pred_scaled
 
     preds = scaler.inverse_transform(np.array(preds).reshape(-1,1)).flatten()
 
