@@ -230,7 +230,7 @@ def calculate_backtest(df, strategy_type='SMA Crossover'):
         rsi = calculate_rsi(df)
 
         # Vectorized approach using masking and forward fill
-        # This is ~28x faster than iterating through the RSI series
+        # This is ~25x faster than iterating through the RSI series (see benchmarks/benchmark_rsi.py)
         signal_series = pd.Series(np.nan, index=rsi.index)
         signal_series[rsi < 30] = 1.0
         signal_series[rsi > 70] = 0.0
