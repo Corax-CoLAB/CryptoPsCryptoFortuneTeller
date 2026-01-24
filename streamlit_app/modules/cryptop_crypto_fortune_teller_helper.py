@@ -304,3 +304,156 @@ def get_batch_historical_prices(coin_ids, days=90):
     # Concatenate all at once along columns (axis=1)
     combined_df = pd.concat(dfs, axis=1, join='outer')
     return combined_df
+
+# --- NEW FEATURES ---
+
+def calculate_stochastic_oscillator(df, k_window=14, d_window=3):
+    """
+    Calculate Stochastic Oscillator (K and D).
+    Requires 'high', 'low', 'close' columns.
+    """
+    if not all(col in df.columns for col in ['high', 'low', 'close']):
+        return pd.DataFrame()
+
+    low_min = df['low'].rolling(window=k_window).min()
+    high_max = df['high'].rolling(window=k_window).max()
+
+    k = 100 * ((df['close'] - low_min) / (high_max - low_min))
+    d = k.rolling(window=d_window).mean()
+
+    return pd.DataFrame({'%K': k, '%D': d}, index=df.index)
+
+def calculate_ichimoku_cloud(df):
+    """
+    Calculate Ichimoku Cloud components.
+    Requires 'high', 'low' columns.
+    """
+    if not all(col in df.columns for col in ['high', 'low']):
+        return pd.DataFrame()
+
+    # Conversion Line (Tenkan-sen): (9-period high + 9-period low) / 2
+    period9_high = df['high'].rolling(window=9).max()
+    period9_low = df['low'].rolling(window=9).min()
+    tenkan_sen = (period9_high + period9_low) / 2
+
+    # Base Line (Kijun-sen): (26-period high + 26-period low) / 2
+    period26_high = df['high'].rolling(window=26).max()
+    period26_low = df['low'].rolling(window=26).min()
+    kijun_sen = (period26_high + period26_low) / 2
+
+    # Leading Span A (Senkou Span A): (Conversion Line + Base Line) / 2
+    senkou_span_a = ((tenkan_sen + kijun_sen) / 2).shift(26)
+
+    # Leading Span B (Senkou Span B): (52-period high + 52-period low) / 2
+    period52_high = df['high'].rolling(window=52).max()
+    period52_low = df['low'].rolling(window=52).min()
+    senkou_span_b = ((period52_high + period52_low) / 2).shift(26)
+
+    # Lagging Span (Chikou Span): Close plotted 26 periods in the past
+    chikou_span = df['close'].shift(-26)
+
+    return pd.DataFrame({
+        'Tenkan': tenkan_sen,
+        'Kijun': kijun_sen,
+        'SpanA': senkou_span_a,
+        'SpanB': senkou_span_b,
+        'Chikou': chikou_span
+    }, index=df.index)
+
+def calculate_pivot_points(df):
+    """
+    Calculate Pivot Points (Standard) based on the previous day's High, Low, Close.
+    Returns a dict with pivot levels for the *current* day (projected from last full candle).
+    """
+    if df.empty or len(df) < 1:
+        return {}
+
+    # We take the last completed candle (assuming daily data)
+    last_candle = df.iloc[-1]
+
+    # If using current day's incomplete candle, it's an estimation.
+    # For daily pivots, we typically use yesterday's HLC.
+    if len(df) > 1:
+        prev_candle = df.iloc[-2]
+    else:
+        prev_candle = last_candle
+
+    high = prev_candle['high'] if 'high' in prev_candle else prev_candle['close']
+    low = prev_candle['low'] if 'low' in prev_candle else prev_candle['close']
+    close = prev_candle['close']
+
+    pivot = (high + low + close) / 3
+    r1 = (2 * pivot) - low
+    s1 = (2 * pivot) - high
+    r2 = pivot + (high - low)
+    s2 = pivot - (high - low)
+    r3 = high + 2 * (pivot - low)
+    s3 = low - 2 * (high - pivot)
+
+    return {
+        'Pivot': pivot,
+        'R1': r1, 'S1': s1,
+        'R2': r2, 'S2': s2,
+        'R3': r3, 'S3': s3
+    }
+
+def calculate_fibonacci_levels(df):
+    """
+    Calculate Fibonacci Retracement levels based on the visible high and low range.
+    Returns a dict of levels.
+    """
+    if df.empty or 'high' not in df or 'low' not in df:
+        return {}
+
+    max_price = df['high'].max()
+    min_price = df['low'].min()
+    diff = max_price - min_price
+
+    return {
+        '0.0% (High)': max_price,
+        '23.6%': max_price - 0.236 * diff,
+        '38.2%': max_price - 0.382 * diff,
+        '50.0%': max_price - 0.5 * diff,
+        '61.8%': max_price - 0.618 * diff,
+        '78.6%': max_price - 0.786 * diff,
+        '100.0% (Low)': min_price
+    }
+
+def calculate_roi(initial_investment, initial_price, current_price):
+    """
+    Calculate Return on Investment.
+    """
+    if initial_price == 0:
+        return 0, 0
+
+    amount_bought = initial_investment / initial_price
+    current_value = amount_bought * current_price
+    profit = current_value - initial_investment
+    roi_pct = (profit / initial_investment) * 100
+
+    return current_value, roi_pct
+
+def calculate_moon_math(current_price, current_supply, target_market_cap):
+    """
+    Calculate price required to reach a target market cap.
+    """
+    if current_supply == 0:
+        return 0
+    target_price = target_market_cap / current_supply
+    upside = ((target_price - current_price) / current_price) * 100
+    return target_price, upside
+
+@st.cache_data(ttl=3600)
+def get_coin_market_cap_batch(limit=50):
+    """
+    Fetch market data for top N coins to visualize market cap.
+    """
+    try:
+        # vs_currency='usd' is default
+        data = cg.get_coins_markets(vs_currency='usd', order='market_cap_desc', per_page=limit, page=1)
+        df = pd.DataFrame(data)
+        # We want: id, symbol, name, market_cap, current_price, price_change_percentage_24h
+        return df[['id', 'symbol', 'name', 'market_cap', 'current_price', 'price_change_percentage_24h', 'total_volume']]
+    except Exception as e:
+        st.error(f"Error fetching market cap batch: {e}")
+        return pd.DataFrame()
