@@ -33,6 +33,7 @@ from modules.cryptop_crypto_fortune_teller_helper import (
 )
 from modules.cryptop_crypto_fortune_teller_models import (
     forecast_prophet,
+    forecast_prophet_ensemble,
     forecast_lstm,
 )
 from modules.cryptop_crypto_fortune_teller_styles import apply_custom_css
@@ -82,9 +83,27 @@ with st.sidebar:
         selected_option = st.selectbox("Select Cryptocurrency", options, index=0, help="Search and select the cryptocurrency you want to analyze.")
         coin_id = mapping[selected_option]
 
-    with st.expander("🔮 Forecast Settings"):
-        model_choice = st.selectbox("Forecast Model", ["Prophet", "LSTM"], help="Prophet: Best for capturing seasonality.\nLSTM: Deep learning for complex patterns.")
+    with st.expander("🔮 Forecast Settings", expanded=True):
+        model_family = st.selectbox("Forecast Engine", ["Prophet (Ensemble)", "LSTM (Deep Learning)"], help="Prophet: Statistical models for seasonality/trend. LSTM: Neural network for complex patterns.")
         forecast_days = st.slider("Forecast Days", 7, 90, 30, help="Choose how far into the future you want to predict prices.")
+
+        prophet_variants = []
+        enhance_sentiment = False
+
+        if model_family == "Prophet (Ensemble)":
+            st.markdown("### ⚙️ Model Configuration")
+            prophet_variants = st.multiselect(
+                "Select Models to Combine",
+                ["Standard", "Volatile (Trend Chaser)", "Conservative (Safe Haven)"],
+                default=["Standard"],
+                help="Combine multiple models for better accuracy."
+            )
+
+            enhance_sentiment = st.checkbox(
+                "Enhance with Community Sentiment",
+                value=False,
+                help="Analyze community data (Twitter/Reddit sentiment) to adjust the forecast."
+            )
 
     st.markdown("---")
 
@@ -141,54 +160,84 @@ with tab1:
         if price_df.empty:
             st.error("No historical data available for this coin.")
         else:
-            if model_choice == "Prophet":
-                forecast_df = forecast_prophet(price_df, periods=forecast_days)
-                fv = forecast_df[forecast_df['ds'] > price_df.index[-1]][['ds','yhat','yhat_lower','yhat_upper']]
+            if model_family == "Prophet (Ensemble)":
+                # Calculate Sentiment Score
+                s_score = 0.0
+                if enhance_sentiment:
+                    metrics = get_coin_metrics(coin_id)
+                    up_pct = metrics.get('sentiment_up_pct')
+                    if up_pct is not None:
+                        # Normalize 0-100 to -1 to 1
+                        # 50% is neutral (0)
+                        s_score = (float(up_pct) - 50.0) / 50.0
+                        st.info(f"✨ Sentiment Enhancement Active! Market Sentiment is {up_pct:.1f}% Bullish. Adjustment Factor: {s_score:.2f}")
+                    else:
+                        st.warning("Sentiment data unavailable. Proceeding with neutral sentiment.")
+
+                if not prophet_variants:
+                    st.warning("Please select at least one Prophet model variant.")
+                    forecast_df = pd.DataFrame() # Empty
+                    fv = pd.DataFrame()
+                else:
+                    forecast_df = forecast_prophet_ensemble(
+                        price_df,
+                        model_names=prophet_variants,
+                        periods=forecast_days,
+                        sentiment_score=s_score
+                    )
+                    fv = forecast_df[forecast_df['ds'] > price_df.index[-1]][['ds','yhat','yhat_lower','yhat_upper']]
             else:
-                fv = forecast_lstm(price_df, periods=forecast_days)
+                # LSTM
+                forecast_df = forecast_lstm(price_df, periods=forecast_days)
+                fv = forecast_df
 
-            fig = go.Figure()
+            if not fv.empty:
+                fig = go.Figure()
 
-            # Historical
-            fig.add_trace(go.Scatter(
-                x=price_df.index, y=price_df['close'],
-                mode='lines', name='History',
-                line=dict(color='#00FFFF', width=2)
-            ))
-
-            # Forecast
-            fig.add_trace(go.Scatter(
-                x=fv['ds'], y=fv['yhat'],
-                mode='lines', name='Forecast',
-                line=dict(color='#FF00FF', dash='dash', width=3)
-            ))
-
-            if model_choice == "Prophet" and 'yhat_upper' in fv.columns:
+                # Historical
                 fig.add_trace(go.Scatter(
-                    x=fv['ds'], y=fv['yhat_upper'],
-                    mode='lines', marker=dict(color="#444"), line=dict(width=0), showlegend=False
-                ))
-                fig.add_trace(go.Scatter(
-                    x=fv['ds'], y=fv['yhat_lower'],
-                    marker=dict(color="#444"), line=dict(width=0), mode='lines',
-                    fillcolor='rgba(255, 0, 255, 0.1)', fill='tonexty', showlegend=False
+                    x=price_df.index, y=price_df['close'],
+                    mode='lines', name='History',
+                    line=dict(color='#00FFFF', width=2)
                 ))
 
-            fig.update_layout(
-                title=f"{selected_option} - {model_choice} Forecast",
-                xaxis_title="Date", yaxis_title="Price (USD)",
-                template="plotly_dark", height=500, hovermode="x unified"
-            )
-            st.plotly_chart(fig, use_container_width=True)
+                # Forecast
+                fig.add_trace(go.Scatter(
+                    x=fv['ds'], y=fv['yhat'],
+                    mode='lines', name='Forecast',
+                    line=dict(color='#FF00FF', dash='dash', width=3)
+                ))
 
-            # Download Forecast Data
-            csv = fv.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Download Forecast CSV",
-                data=csv,
-                file_name=f'{coin_id}_forecast.csv',
-                mime='text/csv',
-            )
+                if model_family == "Prophet (Ensemble)" and 'yhat_upper' in fv.columns:
+                    fig.add_trace(go.Scatter(
+                        x=fv['ds'], y=fv['yhat_upper'],
+                        mode='lines', marker=dict(color="#444"), line=dict(width=0), showlegend=False
+                    ))
+                    fig.add_trace(go.Scatter(
+                        x=fv['ds'], y=fv['yhat_lower'],
+                        marker=dict(color="#444"), line=dict(width=0), mode='lines',
+                        fillcolor='rgba(255, 0, 255, 0.1)', fill='tonexty', showlegend=False
+                    ))
+
+                title_text = f"{selected_option} - {model_family} Forecast"
+                if model_family == "Prophet (Ensemble)":
+                    title_text += f" ({' + '.join(prophet_variants)})"
+
+                fig.update_layout(
+                    title=title_text,
+                    xaxis_title="Date", yaxis_title="Price (USD)",
+                    template="plotly_dark", height=500, hovermode="x unified"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Download Forecast Data
+                csv = fv.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Download Forecast CSV",
+                    data=csv,
+                    file_name=f'{coin_id}_forecast.csv',
+                    mime='text/csv',
+                )
 
 # --- TAB 2: ANALYSIS ---
 with tab2:
@@ -618,14 +667,15 @@ with tab9:
     </div>
 
     ### 🌟 New Features & Enhancements
-    1.  **Market Cap Treemap:** Visualize the entire market in one glance.
-    2.  **Multi-Asset Comparison:** Compare performance of up to 5 coins side-by-side.
-    3.  **Advanced Indicators:** Ichimoku Cloud, Stochastic, Pivot Points, SMA Ribbons.
-    4.  **Calculators:** ROI, Moon Math, and Risk/Reward tools.
-    5.  **Interactive Charts:** Zoom, pan, and toggle layers.
-    6.  **Portfolio Insights:** Best and Worst performers tracking.
-    7.  **Deep Forecasts:** Prophet and LSTM models at your fingertips.
-    8.  **Data Export:** Download your analysis as CSV.
+    1.  **Multi-Model Forecasting:** Combine up to 3 Prophet models (Standard, Trend Chaser, Safe Haven) for robust predictions.
+    2.  **Sentiment Enhancement:** Enhance forecasts with real-time community sentiment data.
+    3.  **Market Cap Treemap:** Visualize the entire market in one glance.
+    4.  **Multi-Asset Comparison:** Compare performance of up to 5 coins side-by-side.
+    5.  **Advanced Indicators:** Ichimoku Cloud, Stochastic, Pivot Points, SMA Ribbons.
+    6.  **Calculators:** ROI, Moon Math, and Risk/Reward tools.
+    7.  **Interactive Charts:** Zoom, pan, and toggle layers.
+    8.  **Portfolio Insights:** Best and Worst performers tracking.
+    9.  **Data Export:** Download your analysis as CSV.
 
     ---
     *Disclaimer: This tool is for entertainment and educational purposes only. The future is always in flux.*
