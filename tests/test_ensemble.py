@@ -45,7 +45,8 @@ class TestProphetEnsemble(unittest.TestCase):
         res = forecast_prophet_ensemble(self.df, ["Standard"], periods=30)
 
         # Verify
-        self.assertEqual(len(res), 130)
+        # Now expects only future periods (30)
+        self.assertEqual(len(res), 30)
         self.assertIn('yhat', res.columns)
         mock_prophet.assert_called() # Should be called
 
@@ -54,18 +55,6 @@ class TestProphetEnsemble(unittest.TestCase):
         # Setup mock
         mock_model_instance = MagicMock()
         mock_prophet.return_value = mock_model_instance
-
-        # We need to simulate different returns for different calls if possible,
-        # but since we are mocking the class, every instantiation returns the same mock instance.
-        # We can use side_effect on predict, but the instance is created fresh each time inside the function.
-        # However, mock_prophet is the Class constructor.
-
-        # Let's make the Class constructor return *different* instances or instances that behave differently?
-        # Simpler: The function instantiates Prophet() -> returns m1. Then m1.fit(). m1.predict().
-        # Next call: Prophet() -> returns m2.
-
-        # If we want to verify averaging, we need distinct values.
-        # Let's set side_effect of predict to return different dataframes.
 
         future_dates = pd.date_range(start='2023-01-01', periods=130)
 
@@ -85,10 +74,6 @@ class TestProphetEnsemble(unittest.TestCase):
             'yhat_upper': np.full(130, 210.0)
         })
 
-        # We need to hook into the instance.predict method.
-        # Since the function creates a new instance each time: `model = Prophet(...)`
-        # We can make mock_prophet.side_effect return [mock_inst1, mock_inst2]
-
         m1 = MagicMock()
         m1.predict.return_value = df1
         m1.make_future_dataframe.return_value = pd.DataFrame({'ds': future_dates})
@@ -103,6 +88,7 @@ class TestProphetEnsemble(unittest.TestCase):
         res = forecast_prophet_ensemble(self.df, ["Standard", "Volatile (Trend Chaser)"], periods=30)
 
         # Expected Average: (100 + 200) / 2 = 150
+        # Since input is constant, result is constant 150
         self.assertAlmostEqual(res['yhat'].iloc[0], 150.0)
         self.assertAlmostEqual(res['yhat_lower'].iloc[0], 140.0)
         self.assertAlmostEqual(res['yhat_upper'].iloc[0], 160.0)
@@ -127,25 +113,22 @@ class TestProphetEnsemble(unittest.TestCase):
         mock_model_instance.make_future_dataframe.return_value = pd.DataFrame({'ds': future_dates})
 
         # Run with Sentiment Score = 0.5 (Positive)
-        # Our logic: last 30 days get linear ramp up to (score * 0.10).
-        # Max increase = 0.5 * 0.10 = 0.05 (5%)
-        # So last value should be 100 * 1.05 = 105.
-        # First value (historical) should be 100.
+        # Result is now only future (30 days).
+        # Ramp starts at 0 at index 0 (start of forecast) and goes to 0.5*0.1 = 0.05 at index -1.
 
         res = forecast_prophet_ensemble(self.df, ["Standard"], periods=30, sentiment_score=0.5)
 
-        # Check historical (index 0)
+        # Check start of forecast (index 0)
+        # Should be 100 * (1.0 + 0) = 100
         self.assertEqual(res['yhat'].iloc[0], 100.0)
 
-        # Check future (last index)
-        # Note: floating point precision
+        # Check end of forecast (index -1)
+        # Should be 100 * (1.0 + 0.05) = 105
         self.assertAlmostEqual(res['yhat'].iloc[-1], 105.0, places=1)
 
         # Run with Sentiment Score = -0.5 (Negative)
-        # Max decrease = -0.5 * 0.10 = -0.05
-        # Last value = 100 * 0.95 = 95
+        # End value = 100 * (1.0 - 0.05) = 95
 
-        # Need to reset mock side effect if we used it, but here return_value is static which is fine
         res_neg = forecast_prophet_ensemble(self.df, ["Standard"], periods=30, sentiment_score=-0.5)
         self.assertAlmostEqual(res_neg['yhat'].iloc[-1], 95.0, places=1)
 

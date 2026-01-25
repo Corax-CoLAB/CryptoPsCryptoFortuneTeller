@@ -8,6 +8,9 @@ from tensorflow.keras.layers import LSTM, Dense, Input
 from sklearn.preprocessing import MinMaxScaler
 import logging
 import os
+import statsmodels.api as sm
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -76,83 +79,85 @@ def _run_prophet_model(df, config, periods=30):
         st.error(f"Prophet model failed: {e}")
         return pd.DataFrame(columns=['ds','yhat','yhat_lower','yhat_upper'])
 
-def forecast_prophet_ensemble(df, model_names, periods=30, sentiment_score=0.0):
+@st.cache_data(ttl=3600)
+def forecast_arima(df, periods=30):
     """
-    Runs multiple Prophet models and averages the results.
-    Apply sentiment adjustment if sentiment_score is provided.
-
-    model_names: list of strings (e.g. ["Standard", "Volatile"])
-    sentiment_score: float between -1.0 and 1.0
+    Forecast using ARIMA model (Auto-Regressive Integrated Moving Average).
     """
-    if not model_names:
-        model_names = ["Standard"]
+    if df.empty:
+        return pd.DataFrame(columns=['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
 
-    forecasts = []
+    try:
+        # ARIMA requires a 1D series
+        # We assume daily data.
+        # Order (p,d,q) selection is complex. We'll use a standard (5,1,0) for daily financial data often used as baseline.
+        # Or (1,1,1). Let's use (5,1,0) as a "Trend" follower.
 
-    for name in model_names:
-        config = get_prophet_config(name)
-        # We pass config as a dict, but st.cache_data handles dicts well if they are consistent.
-        # To be safe for hashing, we could convert to tuple items, but dict is generally fine in recent Streamlit versions
-        # or we rely on the function logic. To be 100% safe with hashing, let's keep it simple.
-        f = _run_prophet_model(df, config, periods)
-        if not f.empty:
-            forecasts.append(f)
+        series = df['close']
+        # Ensure frequency is set if possible, otherwise indices are integers
+        # We will use integer steps for forecasting and map back to dates
 
-    if not forecasts:
-        return pd.DataFrame(columns=['ds','yhat','yhat_lower','yhat_upper'])
+        model = ARIMA(series, order=(5, 1, 0))
+        model_fit = model.fit()
 
-    # Combine forecasts
-    # Assumes all forecasts have the same 'ds' column
-    base = forecasts[0].copy()
+        # Forecast
+        forecast_result = model_fit.get_forecast(steps=periods)
+        pred_mean = forecast_result.predicted_mean
+        conf_int = forecast_result.conf_int()
 
-    if len(forecasts) > 1:
-        # Average the numeric columns
-        for col in ['yhat', 'yhat_lower', 'yhat_upper']:
-            # Stack columns from all dfs
-            stacked = np.column_stack([f[col].values for f in forecasts])
-            # Mean across columns
-            base[col] = np.mean(stacked, axis=1)
+        # Map to dates
+        last_date = df.index[-1]
+        future_dates = [last_date + pd.Timedelta(days=i) for i in range(1, periods+1)]
 
-    # Apply Sentiment Adjustment (Post-Processing)
-    # Logic:
-    # If score is positive (e.g. +0.8), we tilt the forecast upwards slightly.
-    # We apply this progressively into the future? Or a flat shift?
-    # A progressive shift makes more sense for a "forecast".
-    # Multiplier starts at 1.0 and grows/shrinks linearly to (1 + score * factor) at the end of period.
+        forecast_df = pd.DataFrame({
+            'ds': future_dates,
+            'yhat': pred_mean.values,
+            'yhat_lower': conf_int.iloc[:, 0].values,
+            'yhat_upper': conf_int.iloc[:, 1].values
+        })
 
-    if sentiment_score != 0.0 and len(base) > 0:
-        # Factor: How much impact? Let's say max 10% change for max sentiment at the end of 30 days.
-        impact_factor = 0.10
+        return forecast_df
+    except Exception as e:
+        # st.error(f"ARIMA model failed: {e}")
+        return pd.DataFrame(columns=['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
 
-        # We only adjust the *future* part.
-        # Identify future rows (where ds > last historical date)
-        # But here we don't have the original df index easily to check against.
-        # We can assume the last 'periods' rows are future.
+@st.cache_data(ttl=3600)
+def forecast_sarima(df, periods=30):
+    """
+    Forecast using SARIMA model (Seasonal ARIMA).
+    """
+    if df.empty:
+        return pd.DataFrame(columns=['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
 
-        total_rows = len(base)
-        future_idx_start = total_rows - periods
+    try:
+        # SARIMA (1, 1, 1) x (1, 1, 0, 12) - assuming some seasonality but hard to guess generic
+        # A safer generic bet for financial time series with potential seasonality:
+        # (1, 1, 1) x (0, 1, 1, 7) for weekly seasonality
 
-        if future_idx_start < 0: future_idx_start = 0
+        series = df['close']
 
-        # Create a multiplier array
-        # Historical part gets 1.0 (no change)
-        # Future part gets linear ramp
+        # Using a simpler seasonal order to ensure stability in generic cases
+        model = SARIMAX(series, order=(1, 1, 1), seasonal_order=(0, 1, 1, 7))
+        model_fit = model.fit(disp=False)
 
-        multipliers = np.ones(total_rows)
+        forecast_result = model_fit.get_forecast(steps=periods)
+        pred_mean = forecast_result.predicted_mean
+        conf_int = forecast_result.conf_int()
 
-        # Linear ramp from 0 to sentiment_score
-        ramp = np.linspace(0, sentiment_score * impact_factor, periods)
-        multipliers[future_idx_start:] += ramp
+        last_date = df.index[-1]
+        future_dates = [last_date + pd.Timedelta(days=i) for i in range(1, periods+1)]
 
-        base['yhat'] *= multipliers
-        base['yhat_upper'] *= multipliers
-        base['yhat_lower'] *= multipliers
+        forecast_df = pd.DataFrame({
+            'ds': future_dates,
+            'yhat': pred_mean.values,
+            'yhat_lower': conf_int.iloc[:, 0].values,
+            'yhat_upper': conf_int.iloc[:, 1].values
+        })
 
-    return base
-
-# Wrapper for backward compatibility if needed, or just standard usage
-def forecast_prophet(df, periods=30):
-    return forecast_prophet_ensemble(df, ["Standard"], periods)
+        return forecast_df
+    except Exception as e:
+        # st.error(f"SARIMA model failed: {e}")
+        return pd.DataFrame(columns=['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
 
 @st.cache_data(ttl=3600)
 def forecast_lstm(df, periods=30, n_steps=60):
@@ -211,5 +216,95 @@ def forecast_lstm(df, periods=30, n_steps=60):
 
     last_date = pd.to_datetime(df_lstm['date'].iloc[-1])
     future_dates = [last_date + pd.Timedelta(days=i) for i in range(1, periods+1)]
-    forecast_df = pd.DataFrame({'ds': future_dates, 'yhat': preds})
+
+    # LSTM doesn't give confidence intervals by default, so we fill with NaNs or copy yhat
+    forecast_df = pd.DataFrame({
+        'ds': future_dates,
+        'yhat': preds,
+        'yhat_lower': preds, # Fallback
+        'yhat_upper': preds  # Fallback
+    })
     return forecast_df
+
+def forecast_general_ensemble(df, model_names, periods=30, sentiment_score=0.0):
+    """
+    Grand Ensemble that can combine Prophet, LSTM, ARIMA, SARIMA.
+    """
+    if not model_names:
+        model_names = ["Prophet (Standard)"]
+
+    forecasts = []
+
+    # Dispatcher
+    for name in model_names:
+        f = pd.DataFrame()
+
+        if "Prophet" in name:
+            # Map name to config key
+            p_name = name.replace("Prophet (", "").replace(")", "")
+            # If name was just "Prophet", default to Standard
+            if p_name == "Prophet": p_name = "Standard"
+
+            # Use internal prophet runner
+            config = get_prophet_config(p_name)
+            f = _run_prophet_model(df, config, periods)
+
+        elif name == "LSTM":
+            f = forecast_lstm(df, periods)
+
+        elif name == "ARIMA":
+            f = forecast_arima(df, periods)
+
+        elif name == "SARIMA":
+            f = forecast_sarima(df, periods)
+
+        if not f.empty:
+            # Ensure columns exist (LSTM might miss lower/upper)
+            if 'yhat_lower' not in f.columns: f['yhat_lower'] = f['yhat']
+            if 'yhat_upper' not in f.columns: f['yhat_upper'] = f['yhat']
+            forecasts.append(f)
+
+    if not forecasts:
+        return pd.DataFrame(columns=['ds','yhat','yhat_lower','yhat_upper'])
+
+    # Standardize to Future Only (last 'periods' rows)
+    # This ensures we can average Prophet (History+Future) with ARIMA/LSTM (Future Only)
+    processed_forecasts = []
+    for f in forecasts:
+        if len(f) > periods:
+            # Assume the future is at the end
+            processed_forecasts.append(f.iloc[-periods:].reset_index(drop=True))
+        else:
+            processed_forecasts.append(f.reset_index(drop=True))
+
+    # Average results
+    base = processed_forecasts[0].copy()
+    if len(processed_forecasts) > 1:
+        for col in ['yhat', 'yhat_lower', 'yhat_upper']:
+            stacked = np.column_stack([f[col].values for f in processed_forecasts])
+            base[col] = np.mean(stacked, axis=1)
+
+    # Sentiment Adjustment
+    if sentiment_score != 0.0 and len(base) > 0:
+        impact_factor = 0.10
+        # Linear ramp from 0 to sentiment_score
+        ramp = np.linspace(0, sentiment_score * impact_factor, len(base))
+
+        multipliers = 1.0 + ramp
+        base['yhat'] *= multipliers
+        base['yhat_lower'] *= multipliers
+        base['yhat_upper'] *= multipliers
+
+    return base
+
+# Deprecated aliases kept for safety
+def forecast_prophet(df, periods=30):
+    return forecast_general_ensemble(df, ["Prophet (Standard)"], periods)
+
+def forecast_prophet_ensemble(df, model_names, periods=30, sentiment_score=0.0):
+     # Map old names if necessary, but string matching in general_ensemble handles it
+     # "Standard" -> "Prophet (Standard)" mapping needed?
+     # general_ensemble expects "Prophet (Standard)".
+     # wrapper:
+     mapped_names = [f"Prophet ({n})" if "Prophet" not in n else n for n in model_names]
+     return forecast_general_ensemble(df, mapped_names, periods, sentiment_score)
