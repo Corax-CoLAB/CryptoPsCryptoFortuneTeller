@@ -340,12 +340,9 @@ def get_batch_historical_prices(coin_ids, days=90):
     # Use ThreadPoolExecutor for concurrent requests
     # Limit max_workers to avoid hitting rate limits too hard
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        # Submit all tasks. We maintain the order of futures to match coin_ids
-        futures = [executor.submit(fetch_price, cid) for cid in coin_ids]
-
-        # Collect results in order
-        for future in futures:
-            df = future.result()
+        # map returns an iterator that yields results in the order calls were submitted
+        results = executor.map(fetch_price, coin_ids)
+        for df in results:
             if df is not None:
                 dfs.append(df)
 
