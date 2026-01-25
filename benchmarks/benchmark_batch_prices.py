@@ -1,11 +1,16 @@
 
+import sys
+import os
 import time
 import pandas as pd
 import numpy as np
 from unittest.mock import patch
+
+# Add parent directory to path to allow importing modules
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import streamlit_app.modules.cryptop_crypto_fortune_teller_helper as helper
 from streamlit_app.modules.cryptop_crypto_fortune_teller_helper import get_batch_historical_prices
-import concurrent.futures
 
 # Define a mock for get_historical_prices that sleeps
 def mock_get_historical_prices_slow(coin_id, vs_currency='usd', days=365):
