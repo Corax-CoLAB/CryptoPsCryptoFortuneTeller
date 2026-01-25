@@ -83,6 +83,57 @@ def compute_volatility(df, window=14):
         vol['ATR'] = np.nan
     return vol
 
+def check_risk_level(df):
+    """
+    Analyze volatility and return a risk warning if applicable.
+    Returns string (message) or None.
+    """
+    if df.empty or len(df) < 15:
+        return None
+
+    # Calculate volatility
+    vol_data = compute_volatility(df, window=14)
+    if vol_data.empty:
+        return None
+
+    current_vol = vol_data['rolling_std'].iloc[-1]
+    avg_vol = vol_data['rolling_std'].mean()
+
+    # Thresholds: If current volatility is > 2x average, it's High Risk
+    if current_vol > 2 * avg_vol:
+        return "⚠️ High Volatility Detected: Market is extremely turbulent. Prices may fluctuate wildly."
+    elif current_vol > 1.5 * avg_vol:
+        return "⚠️ Elevated Volatility: Caution advised."
+
+    return None
+
+def generate_trading_signal(current_price, forecast_df):
+    """
+    Generate a Buy/Sell signal based on forecast vs current price.
+    Returns string signal and color.
+    """
+    if forecast_df.empty or 'yhat' not in forecast_df.columns:
+        return "N/A", "gray"
+
+    # Get last forecasted price
+    target_price = forecast_df['yhat'].iloc[-1]
+
+    if current_price == 0:
+        return "N/A", "gray"
+
+    pct_change = ((target_price - current_price) / current_price) * 100
+
+    if pct_change > 20:
+        return "STRONG BUY", "#00FF00" # Green
+    elif pct_change > 5:
+        return "BUY", "#90EE90" # Light Green
+    elif pct_change < -20:
+        return "STRONG SELL", "#FF0000" # Red
+    elif pct_change < -5:
+        return "SELL", "#FF6347" # Tomato
+    else:
+        return "HOLD", "#FFFF00" # Yellow
+
 @st.cache_data(ttl=3600)
 def get_coin_metrics(coin_id):
     """

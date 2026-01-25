@@ -1,4 +1,4 @@
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import sync_playwright
 import time
 
 def run():
@@ -9,23 +9,24 @@ def run():
             print("Navigating to app...")
             page.goto("http://localhost:8501", timeout=60000)
 
-            # Wait for main title in the body
-            print("Waiting for main header...")
-            page.wait_for_selector("h1", timeout=60000)
+            print("Waiting for sidebar...")
+            page.wait_for_selector('[data-testid="stSidebar"]', timeout=30000)
+            time.sleep(5)
 
-            # Check for specific text in H1
-            header = page.locator("h1")
-            print(f"Header found: {header.inner_text()}")
-            expect(header).to_contain_text("Crypto P's")
+            print("Locating Forecast Settings...")
+            # Verify new Model Ensemble multiselect is present
+            page.locator('label:has-text("Select Models to Combine")').wait_for()
 
-            # Take screenshot
+            # Verify Forecast Days slider (we updated it to 365, but visual check is harder in code, just checking presence)
+            page.locator('label:has-text("Forecast Horizon (Days)")').wait_for()
+
             print("Taking screenshot...")
-            page.screenshot(path="verification_screenshot.png")
-            print("Done.")
+            page.screenshot(path="verification_screenshot.png", full_page=True)
+            print("Screenshot saved to verification_screenshot.png")
 
         except Exception as e:
             print(f"Error: {e}")
-            page.screenshot(path="verification_error_2.png")
+            page.screenshot(path="verification_error.png")
         finally:
             browser.close()
 
