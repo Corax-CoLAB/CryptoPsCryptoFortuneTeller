@@ -318,7 +318,7 @@ def calculate_backtest(df, strategy_type='SMA Crossover'):
     return df, metrics
 
 @st.cache_data(ttl=3600)
-def get_batch_historical_prices(coin_ids, days=90):
+def get_batch_historical_prices(coin_ids: list, days: int = 90) -> pd.DataFrame:
     """
     Fetch historical prices for multiple coins and return a combined DataFrame.
     Uses concurrent requests to speed up fetching.
@@ -327,8 +327,7 @@ def get_batch_historical_prices(coin_ids, days=90):
 
     def fetch_price(cid):
         try:
-            # Re-use existing function but we need to bypass cache if needed or just use it.
-            # It's cached, so it's fast.
+            # Re-use existing function which is cached and handles its own errors
             df = get_historical_prices(cid, days=days)
             if not df.empty:
                 df = df.rename(columns={'close': cid})
