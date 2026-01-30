@@ -588,37 +588,38 @@ with tab7:
         st.write("#### 💸 If I Invested...")
         col_calc1, col_calc2 = st.columns(2)
         with col_calc1:
-            inv_amount = st.number_input("Investment Amount ($)", 100, 10000, 1000)
-            inv_date = st.date_input("On Date", datetime.date.today() - datetime.timedelta(days=365))
+            inv_amount = st.number_input("Investment Amount ($)", 100, 10000, 1000, help="The initial amount in USD you want to simulate investing.")
+            inv_date = st.date_input("On Date", datetime.date.today() - datetime.timedelta(days=365), help="The past date when you would have made this investment.")
 
         if st.button("Calculate ROI"):
-            # Fetch price on that date
-            # We need to use history function roughly
-            days_diff = (datetime.date.today() - inv_date).days
-            if days_diff < 1:
-                st.warning("Date must be in the past.")
-            else:
-                hist = get_historical_prices(coin_id, days=days_diff+5) # Buffer
-                if not hist.empty:
-                    # Find closest date
-                    closest_idx = hist.index.searchsorted(pd.Timestamp(inv_date))
-                    if closest_idx < len(hist):
-                        past_price = hist.iloc[closest_idx]['close']
-                        curr_p = get_current_price(coin_id).get(coin_id, {}).get('usd', 0)
-
-                        val, pct = calculate_roi(inv_amount, past_price, curr_p)
-                        st.metric("Current Value", f"${val:,.2f}", delta=f"{pct:.2f}%")
-                        st.write(f"Price then: ${past_price:,.2f} | Price now: ${curr_p:,.2f}")
-                    else:
-                        st.error("Date out of range.")
+            with st.spinner("Calculating ROI..."):
+                # Fetch price on that date
+                # We need to use history function roughly
+                days_diff = (datetime.date.today() - inv_date).days
+                if days_diff < 1:
+                    st.warning("Date must be in the past.")
                 else:
-                    st.error("Data unavailable.")
+                    hist = get_historical_prices(coin_id, days=days_diff+5) # Buffer
+                    if not hist.empty:
+                        # Find closest date
+                        closest_idx = hist.index.searchsorted(pd.Timestamp(inv_date))
+                        if closest_idx < len(hist):
+                            past_price = hist.iloc[closest_idx]['close']
+                            curr_p = get_current_price(coin_id).get(coin_id, {}).get('usd', 0)
+
+                            val, pct = calculate_roi(inv_amount, past_price, curr_p)
+                            st.metric("Current Value", f"${val:,.2f}", delta=f"{pct:.2f}%")
+                            st.write(f"Price then: ${past_price:,.2f} | Price now: ${curr_p:,.2f}")
+                        else:
+                            st.error("Date out of range.")
+                    else:
+                        st.error("Data unavailable.")
 
     with c_tab2:
         st.write("#### 🚀 Moon Math")
         st.write(f"Calculate the price of **{selected_option}** if it hits a target Market Cap.")
 
-        mc_target_input = st.number_input("Target Market Cap ($)", value=1_000_000_000.0, step=1_000_000.0)
+        mc_target_input = st.number_input("Target Market Cap ($)", value=1_000_000_000.0, step=1_000_000.0, help="Enter a hypothetical market cap (e.g., Bitcoin's market cap) to see what the coin price would be.")
 
         # Need current supply
         metrics = get_coin_metrics(coin_id)
@@ -627,37 +628,38 @@ with tab7:
         # Let's fetch detail specific for this calculator
 
         if st.button("Calculate Moon Price"):
-            try:
-                data = get_coin_market_cap_batch(50) # simple hack to check if in top 50, otherwise need specific call
-                # Better: get specific coin data again fully if needed, or rely on current price * supply = MC
-                # Let's use simple math: Price = Target MC / Circulating Supply
-                # We need Circulating Supply.
-                # Let's add a helper or just do a quick fetch here
-                # 🛡️ Sentinel: Added timeout for security and reliability
-                response = requests.get(
-                    f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false",
-                    timeout=10
-                )
-                response.raise_for_status()
-                d = response.json()
-                supply = d.get('market_data', {}).get('circulating_supply')
-                curr_p = d.get('market_data', {}).get('current_price', {}).get('usd')
+            with st.spinner("Crunching the numbers..."):
+                try:
+                    data = get_coin_market_cap_batch(50) # simple hack to check if in top 50, otherwise need specific call
+                    # Better: get specific coin data again fully if needed, or rely on current price * supply = MC
+                    # Let's use simple math: Price = Target MC / Circulating Supply
+                    # We need Circulating Supply.
+                    # Let's add a helper or just do a quick fetch here
+                    # 🛡️ Sentinel: Added timeout for security and reliability
+                    response = requests.get(
+                        f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false",
+                        timeout=10
+                    )
+                    response.raise_for_status()
+                    d = response.json()
+                    supply = d.get('market_data', {}).get('circulating_supply')
+                    curr_p = d.get('market_data', {}).get('current_price', {}).get('usd')
 
-                if supply:
-                    t_price, upside = calculate_moon_math(curr_p, supply, mc_target_input)
-                    st.metric("Target Price", f"${t_price:,.4f}", delta=f"{upside:.2f}%")
-                    st.write(f"Circulating Supply: {supply:,.0f}")
-                else:
-                    st.error("Could not fetch supply data.")
-            except Exception as e:
-                st.error(f"Error: {e}")
+                    if supply:
+                        t_price, upside = calculate_moon_math(curr_p, supply, mc_target_input)
+                        st.metric("Target Price", f"${t_price:,.4f}", delta=f"{upside:.2f}%")
+                        st.write(f"Circulating Supply: {supply:,.0f}")
+                    else:
+                        st.error("Could not fetch supply data.")
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
     with c_tab3:
         st.write("#### ⚖️ Risk/Reward Calculator")
         col_r1, col_r2, col_r3 = st.columns(3)
-        entry = col_r1.number_input("Entry Price", value=0.0)
-        stop = col_r2.number_input("Stop Loss", value=0.0)
-        target = col_r3.number_input("Take Profit", value=0.0)
+        entry = col_r1.number_input("Entry Price", value=0.0, help="The price at which you plan to buy (or bought) the asset.")
+        stop = col_r2.number_input("Stop Loss", value=0.0, help="The price at which you will sell to limit your loss.")
+        target = col_r3.number_input("Take Profit", value=0.0, help="The price at which you will sell to take your profit.")
 
         if entry > 0 and stop > 0 and target > 0:
             risk = abs(entry - stop)
