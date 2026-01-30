@@ -535,8 +535,20 @@ with tab5:
         st.plotly_chart(fig_pie, use_container_width=True)
 
         if st.button("Clear Portfolio"):
-            st.session_state.portfolio = []
-            st.experimental_rerun()
+            st.session_state.confirm_clear_portfolio = True
+
+        if st.session_state.get('confirm_clear_portfolio'):
+            st.warning("⚠️ Are you sure you want to clear your entire portfolio? This action cannot be undone.")
+            col_conf_yes, col_conf_no = st.columns(2)
+            with col_conf_yes:
+                if st.button("Yes, Clear Everything", type="primary"):
+                    st.session_state.portfolio = []
+                    st.session_state.confirm_clear_portfolio = False
+                    st.experimental_rerun()
+            with col_conf_no:
+                if st.button("Cancel"):
+                    st.session_state.confirm_clear_portfolio = False
+                    st.experimental_rerun()
     else:
         st.info("Portfolio empty.")
 
