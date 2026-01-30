@@ -621,7 +621,13 @@ with tab7:
                 # Let's use simple math: Price = Target MC / Circulating Supply
                 # We need Circulating Supply.
                 # Let's add a helper or just do a quick fetch here
-                d = requests.get(f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false").json()
+                # 🛡️ Sentinel: Added timeout for security and reliability
+                response = requests.get(
+                    f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false",
+                    timeout=10
+                )
+                response.raise_for_status()
+                d = response.json()
                 supply = d.get('market_data', {}).get('circulating_supply')
                 curr_p = d.get('market_data', {}).get('current_price', {}).get('usd')
 
