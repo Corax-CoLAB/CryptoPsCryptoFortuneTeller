@@ -8,6 +8,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import datetime
 import requests
+import html
 
 from modules.cryptop_crypto_fortune_teller_helper import (
     get_coin_list,
@@ -115,8 +116,8 @@ with st.sidebar:
     if fng:
         val = int(fng['value'])
         color = "red" if val < 40 else "green" if val > 60 else "orange"
-        st.markdown(f"<h2 style='color: {color}; text-align: center;'>{val}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<p style='text-align: center;'>{fng['classification']}</p>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='color: {html.escape(color)}; text-align: center;'>{html.escape(str(val))}</h2>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center;'>{html.escape(fng['classification'])}</p>", unsafe_allow_html=True)
     else:
         st.write("N/A")
 
@@ -198,8 +199,8 @@ with tab1:
                 col_sig1, col_sig2 = st.columns([1, 3])
                 with col_sig1:
                     st.markdown(f"""
-                    <div style="border: 2px solid {signal_color}; padding: 10px; border-radius: 10px; text-align: center;">
-                        <h3 style="color: {signal_color}; margin: 0;">{signal}</h3>
+                    <div style="border: 2px solid {html.escape(signal_color)}; padding: 10px; border-radius: 10px; text-align: center;">
+                        <h3 style="color: {html.escape(signal_color)}; margin: 0;">{html.escape(signal)}</h3>
                         <p style="margin: 0; font-size: 0.8rem;">Trading Signal</p>
                     </div>
                     """, unsafe_allow_html=True)
