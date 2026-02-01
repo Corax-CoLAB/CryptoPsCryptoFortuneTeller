@@ -8,6 +8,7 @@ import concurrent.futures
 
 # Initialize CoinGecko client (public demo API)
 cg = CoinGeckoAPI()
+cg.request_timeout = 20  # Sentinel: Enforce timeout to prevent hanging
 
 @st.cache_data(ttl=86400) # Cache list for 24 hours
 def get_coin_list():
