@@ -631,11 +631,6 @@ with tab7:
         if st.button("Calculate Moon Price"):
             with st.spinner("Crunching the numbers..."):
                 try:
-                    data = get_coin_market_cap_batch(50) # simple hack to check if in top 50, otherwise need specific call
-                    # Better: get specific coin data again fully if needed, or rely on current price * supply = MC
-                    # Let's use simple math: Price = Target MC / Circulating Supply
-                    # We need Circulating Supply.
-                    # Let's add a helper or just do a quick fetch here
                     # 🛡️ Sentinel: Added timeout for security and reliability
                     response = requests.get(
                         f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false",
