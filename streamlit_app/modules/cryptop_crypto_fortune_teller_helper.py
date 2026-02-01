@@ -25,10 +25,10 @@ def get_coin_list():
         return pd.DataFrame(columns=['id', 'symbol', 'name'])
 
 @st.cache_data(ttl=3600) # Cache prices for 1 hour
-def get_historical_prices(coin_id, vs_currency='usd', days=365):
+def _fetch_historical_prices_cached(coin_id, vs_currency='usd', days='max'):
     """
-    Fetch historical market data (prices) for a coin.
-    Returns DataFrame with date index and 'close' prices.
+    Internal cached function to fetch historical market data (prices) for a coin.
+    Defaults to 'max' days to maximize cache hit rate.
     """
     try:
         data = cg.get_coin_market_chart_by_id(id=coin_id, vs_currency=vs_currency, days=days)
@@ -43,6 +43,32 @@ def get_historical_prices(coin_id, vs_currency='usd', days=365):
     except Exception as e:
         st.error(f"Error fetching historical prices: {e}")
         return pd.DataFrame()
+
+def get_historical_prices(coin_id, vs_currency='usd', days=365):
+    """
+    Fetch historical market data (prices) for a coin.
+    Returns DataFrame with date index and 'close' prices.
+    """
+    # Fetch max history (cached)
+    df = _fetch_historical_prices_cached(coin_id, vs_currency, days='max')
+
+    if df.empty:
+        return df
+
+    if days == 'max':
+        return df
+
+    try:
+        days_int = float(days)
+    except (ValueError, TypeError):
+        # Fallback if days cannot be converted to number, return full history
+        return df
+
+    # Slice the dataframe to the requested number of days
+    # Use UTC for consistency as CoinGecko timestamps are UTC based.
+    # df['date'] (index) is naive UTC.
+    cutoff_date = pd.Timestamp.utcnow().replace(tzinfo=None) - pd.Timedelta(days=days_int)
+    return df[df.index >= cutoff_date]
 
 @st.cache_data(ttl=3600)
 def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
