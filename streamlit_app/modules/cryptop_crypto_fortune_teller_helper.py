@@ -28,7 +28,7 @@ def get_coin_list():
 def _fetch_historical_prices_cached(coin_id, vs_currency='usd', days='max'):
     """
     Internal cached function to fetch historical market data (prices) for a coin.
-    Defaults to 'max' days to maximize cache hit rate.
+    Uses 'days' as a resolution bucket (1, 90, or 'max') to optimize caching.
     """
     try:
         data = cg.get_coin_market_chart_by_id(id=coin_id, vs_currency=vs_currency, days=days)
@@ -48,13 +48,31 @@ def get_historical_prices(coin_id, vs_currency='usd', days=365):
     """
     Fetch historical market data (prices) for a coin.
     Returns DataFrame with date index and 'close' prices.
+    Implements a Tiered Caching Strategy (Bucket 1, 90, or Max) to preserve resolution.
     """
-    # Fetch max history (cached)
-    df = _fetch_historical_prices_cached(coin_id, vs_currency, days='max')
+    # Determine cache bucket to preserve resolution
+    try:
+        days_val = float(days)
+    except (ValueError, TypeError):
+        days_val = 99999 # Treat as max
+
+    # Tier 1: 1 day (5 min resolution)
+    if days_val <= 1:
+        fetch_days = 1
+    # Tier 2: 90 days (Hourly resolution)
+    elif days_val <= 90:
+        fetch_days = 90
+    # Tier 3: Max (>90 days) (Daily resolution)
+    else:
+        fetch_days = 'max'
+
+    # Fetch from cached tier
+    df = _fetch_historical_prices_cached(coin_id, vs_currency, days=fetch_days)
 
     if df.empty:
         return df
 
+    # Return full df if 'max' requested or if we are using exact bucket
     if days == 'max':
         return df
 
@@ -71,11 +89,10 @@ def get_historical_prices(coin_id, vs_currency='usd', days=365):
     return df[df.index >= cutoff_date]
 
 @st.cache_data(ttl=3600)
-def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
+def _fetch_historical_ohlc_cached(coin_id, vs_currency='usd', days='max'):
     """
-    Fetch historical OHLC data for a coin.
-    Returns DataFrame with date index and columns ['open','high','low','close'].
-    Uses CoinGecko OHLC endpoint (30-day candlesticks).
+    Internal cached function to fetch historical OHLC data for a coin.
+    Uses 'days' as a resolution bucket (1, 30, or 'max') to optimize caching.
     """
     try:
         ohlc_data = cg.get_coin_ohlc_by_id(id=coin_id, vs_currency=vs_currency, days=days)
@@ -87,6 +104,42 @@ def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
     except Exception as e:
         st.error(f"Error fetching OHLC data: {e}")
         return pd.DataFrame()
+
+def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
+    """
+    Fetch historical OHLC data for a coin.
+    Returns DataFrame with date index and columns ['open','high','low','close'].
+    Implements a Tiered Caching Strategy (Bucket 1, 30, or Max) to preserve resolution while minimizing API calls.
+    """
+    # Determine cache bucket to preserve resolution
+    try:
+        days_val = float(days)
+    except (ValueError, TypeError):
+        days_val = 99999 # Treat as max
+
+    # Tier 1: 1 day (30 min resolution)
+    if days_val <= 1:
+        fetch_days = 1
+    # Tier 2: 30 days (4 hour resolution)
+    elif days_val <= 30:
+        fetch_days = 30
+    # Tier 3: Max (>30 days) (4 day resolution)
+    else:
+        fetch_days = 'max'
+
+    # Fetch from cached tier
+    df = _fetch_historical_ohlc_cached(coin_id, vs_currency, days=fetch_days)
+
+    if df.empty:
+        return df
+
+    # Return full df if 'max' requested or if we are using exact bucket
+    if days == 'max':
+        return df
+
+    # Slice the dataframe to the requested number of days
+    cutoff_date = pd.Timestamp.utcnow().replace(tzinfo=None) - pd.Timedelta(days=days_val)
+    return df[df.index >= cutoff_date]
 
 def compute_volatility(df, window=14):
     """
