@@ -11,7 +11,8 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     compute_volatility,
     calculate_rsi,
     calculate_macd,
-    calculate_bollinger_bands
+    calculate_bollinger_bands,
+    calculate_moon_math
 )
 
 def test_compute_volatility():
@@ -50,3 +51,23 @@ def test_calculate_indicators():
     assert 'B_Upper' in bb.columns
     assert 'B_Lower' in bb.columns
     assert bb['B_Upper'].iloc[-1] >= bb['B_Lower'].iloc[-1]
+
+def test_calculate_moon_math():
+    # Test case 1: Normal calculation
+    current_price = 10.0
+    current_supply = 1_000_000.0
+    target_mc = 20_000_000.0 # Implies target price of 20
+
+    target_price, upside = calculate_moon_math(current_price, current_supply, target_mc)
+
+    assert target_price == 20.0
+    assert upside == 100.0 # (20 - 10) / 10 * 100 = 100%
+
+    # Test case 2: Zero supply (should return 0)
+    assert calculate_moon_math(10, 0, 1000) == 0
+
+    # Test case 3: Target lower than current (negative upside)
+    target_mc_low = 5_000_000.0 # Implies target price 5
+    t_price, up = calculate_moon_math(10, 1_000_000, target_mc_low)
+    assert t_price == 5.0
+    assert up == -50.0
