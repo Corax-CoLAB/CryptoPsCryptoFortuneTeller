@@ -32,5 +32,27 @@ class TestOptimization(unittest.TestCase):
         self.assertEqual(res['ethereum'].iloc[0], 20)
         print("Batch prices optimization verified!")
 
+    @patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.get_historical_prices')
+    @patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.st')
+    def test_batch_prices_limit(self, mock_st, mock_get_prices):
+        # 🛡️ Sentinel Test: Verify batch size limit
+
+        # Setup mock returns to always return a valid DF
+        dates = pd.date_range('2023-01-01', periods=1)
+        mock_get_prices.return_value = pd.DataFrame({'close': [100]}, index=dates)
+
+        # Create 15 dummy IDs
+        coin_ids = [f'coin_{i}' for i in range(15)]
+
+        # Run function
+        res = get_batch_historical_prices(coin_ids)
+
+        # Verify result has exactly 10 columns (the limit)
+        self.assertEqual(res.shape[1], 10, "Should limit to 10 assets")
+
+        # Verify warning was called
+        mock_st.warning.assert_called_once()
+        print("Security limit verified!")
+
 if __name__ == '__main__':
     unittest.main()
