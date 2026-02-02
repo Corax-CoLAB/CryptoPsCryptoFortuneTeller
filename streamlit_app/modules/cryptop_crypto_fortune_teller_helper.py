@@ -371,6 +371,12 @@ def get_batch_historical_prices(coin_ids: list, days: int = 90) -> pd.DataFrame:
     Fetch historical prices for multiple coins and return a combined DataFrame.
     Uses concurrent requests to speed up fetching.
     """
+    # 🛡️ Sentinel: Limit batch size to prevent API abuse/DoS
+    MAX_BATCH_SIZE = 10
+    if len(coin_ids) > MAX_BATCH_SIZE:
+        st.warning(f"⚠️ Security Limit: Request truncated to first {MAX_BATCH_SIZE} assets to prevent API rate limit exhaustion.")
+        coin_ids = coin_ids[:MAX_BATCH_SIZE]
+
     dfs = []
 
     def fetch_price(cid):

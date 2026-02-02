@@ -12,3 +12,8 @@
 **Vulnerability:** The `pycoingecko` library's wrapper class `CoinGeckoAPI` has a default timeout of 120 seconds, which is too long for a user-facing application and can lead to resource exhaustion if the API hangs.
 **Learning:** Third-party wrappers often abstract away low-level configuration like timeouts, leading to hidden availability risks. Explicitly inspecting and overriding these defaults is crucial.
 **Prevention:** Always verify default timeouts for 3rd party API clients and explicitly set them to fail fast (e.g., 20s) to prevent hanging processes.
+
+## 2026-02-02 - [DoS Risk] Unbounded Batch Processing
+**Vulnerability:** The `get_batch_historical_prices` function processed all input assets without a limit. A malicious actor (or user error) could request hundreds of assets, triggering API rate limits and exhausting application resources (threads/connections).
+**Learning:** Functions that accept list inputs and trigger external API calls for each item must have explicit upper bounds on the input size, independent of UI limits.
+**Prevention:** Enforced a strict limit (10 items) in the logic layer (`cryptop_crypto_fortune_teller_helper.py`) and added a warning when truncation occurs.
