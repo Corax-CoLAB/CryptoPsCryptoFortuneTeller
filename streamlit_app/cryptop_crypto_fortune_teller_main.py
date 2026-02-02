@@ -622,12 +622,6 @@ with tab7:
 
         mc_target_input = st.number_input("Target Market Cap ($)", value=1_000_000_000.0, step=1_000_000.0, help="Enter a hypothetical market cap (e.g., Bitcoin's market cap) to see what the coin price would be.")
 
-        # Need current supply
-        metrics = get_coin_metrics(coin_id)
-        # Actually metrics doesn't have supply, let's check market batch or use a fallback
-        # We can get supply from market batch if we loaded it, or just ask user/fetch detail
-        # Let's fetch detail specific for this calculator
-
         if st.button("Calculate Moon Price"):
             with st.spinner("Crunching the numbers..."):
                 try:
