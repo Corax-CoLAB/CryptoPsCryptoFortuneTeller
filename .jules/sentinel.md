@@ -17,3 +17,8 @@
 **Vulnerability:** The `get_batch_historical_prices` function processed all input assets without a limit. A malicious actor (or user error) could request hundreds of assets, triggering API rate limits and exhausting application resources (threads/connections).
 **Learning:** Functions that accept list inputs and trigger external API calls for each item must have explicit upper bounds on the input size, independent of UI limits.
 **Prevention:** Enforced a strict limit (10 items) in the logic layer (`cryptop_crypto_fortune_teller_helper.py`) and added a warning when truncation occurs.
+
+## 2026-05-21 - [High Risk] Disabled XSRF Protection
+**Vulnerability:** `enableXsrfProtection` was explicitly set to `false` in `.streamlit/config.toml`, leaving the application vulnerable to Cross-Site Request Forgery attacks, which could allow attackers to perform actions on behalf of authenticated users (e.g., clearing portfolios).
+**Learning:** Security defaults in frameworks like Streamlit are there for a reason. Explicitly disabling them (often for "convenience" during dev) creates a persistent vulnerability if carried to production.
+**Prevention:** Added `tests/test_config_security.py` to enforce that critical security flags (`enableXsrfProtection`, `enableCORS`) are not disabled in the configuration.
