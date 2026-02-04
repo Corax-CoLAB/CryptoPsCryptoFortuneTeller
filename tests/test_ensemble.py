@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+import importlib
 
 # Mock streamlit before importing modules
 sys.modules['streamlit'] = MagicMock()
@@ -12,6 +13,10 @@ sys.modules['streamlit'].error = MagicMock()
 
 # Add streamlit_app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
+
+import modules.cryptop_crypto_fortune_teller_models
+# Force reload to ensure it uses the mocked streamlit
+importlib.reload(modules.cryptop_crypto_fortune_teller_models)
 
 from modules.cryptop_crypto_fortune_teller_models import forecast_prophet_ensemble, get_prophet_config
 

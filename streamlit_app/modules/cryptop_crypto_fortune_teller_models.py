@@ -15,6 +15,10 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
+# 🛡️ Sentinel: DoS Protection Limits
+MAX_FORECAST_HORIZON = 365
+MAX_HISTORY_LENGTH = 2000
+
 def get_prophet_config(model_name):
     """
     Returns hyperparameters for different Prophet model configurations.
@@ -45,6 +49,14 @@ def _run_prophet_model(df, config, periods=30):
     """
     Internal function to run a single Prophet model with specific config.
     """
+    # 🛡️ Sentinel: Enforce Input Limits
+    if periods > MAX_FORECAST_HORIZON:
+        logging.warning(f"Prophet: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
+        periods = MAX_FORECAST_HORIZON
+
+    if len(df) > MAX_HISTORY_LENGTH:
+        df = df.iloc[-MAX_HISTORY_LENGTH:]
+
     if df.empty or len(df) < 2:
         return pd.DataFrame(columns=['ds','yhat','yhat_lower','yhat_upper'])
 
@@ -84,6 +96,14 @@ def forecast_arima(df, periods=30):
     """
     Forecast using ARIMA model (Auto-Regressive Integrated Moving Average).
     """
+    # 🛡️ Sentinel: Enforce Input Limits
+    if periods > MAX_FORECAST_HORIZON:
+        logging.warning(f"ARIMA: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
+        periods = MAX_FORECAST_HORIZON
+
+    if len(df) > MAX_HISTORY_LENGTH:
+        df = df.iloc[-MAX_HISTORY_LENGTH:]
+
     if df.empty:
         return pd.DataFrame(columns=['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
 
@@ -126,6 +146,14 @@ def forecast_sarima(df, periods=30):
     """
     Forecast using SARIMA model (Seasonal ARIMA).
     """
+    # 🛡️ Sentinel: Enforce Input Limits
+    if periods > MAX_FORECAST_HORIZON:
+        logging.warning(f"SARIMA: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
+        periods = MAX_FORECAST_HORIZON
+
+    if len(df) > MAX_HISTORY_LENGTH:
+        df = df.iloc[-MAX_HISTORY_LENGTH:]
+
     if df.empty:
         return pd.DataFrame(columns=['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
 
@@ -166,6 +194,14 @@ def forecast_lstm(df, periods=30, n_steps=60):
     Accepts DataFrame with date index and 'close' column.
     Returns DataFrame with 'ds' and 'yhat'.
     """
+    # 🛡️ Sentinel: Enforce Input Limits
+    if periods > MAX_FORECAST_HORIZON:
+        logging.warning(f"LSTM: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
+        periods = MAX_FORECAST_HORIZON
+
+    if len(df) > MAX_HISTORY_LENGTH:
+        df = df.iloc[-MAX_HISTORY_LENGTH:]
+
     if df.empty:
         return pd.DataFrame(columns=['ds', 'yhat'])
 
