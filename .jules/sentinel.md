@@ -22,3 +22,8 @@
 **Vulnerability:** `enableXsrfProtection` was explicitly set to `false` in `.streamlit/config.toml`, leaving the application vulnerable to Cross-Site Request Forgery attacks, which could allow attackers to perform actions on behalf of authenticated users (e.g., clearing portfolios).
 **Learning:** Security defaults in frameworks like Streamlit are there for a reason. Explicitly disabling them (often for "convenience" during dev) creates a persistent vulnerability if carried to production.
 **Prevention:** Added `tests/test_config_security.py` to enforce that critical security flags (`enableXsrfProtection`, `enableCORS`) are not disabled in the configuration.
+
+## 2026-06-15 - [DoS Risk] Unbounded Model Forecasting
+**Vulnerability:** Forecasting models (LSTM, ARIMA, Prophet) accepted unbounded `periods` and `history` length. A malicious or accidental request with extremely large values (e.g., 10,000 days forecast) caused excessive computation time (DoS) and potential memory exhaustion.
+**Learning:** Data science models are often computationally expensive. Always enforce strict limits on input dimensions (e.g., history length, forecast horizon) at the model function level, regardless of UI constraints.
+**Prevention:** Implemented `MAX_FORECAST_HORIZON` (365) and `MAX_HISTORY_LENGTH` (2000) constants in `cryptop_crypto_fortune_teller_models.py` and enforced them in all forecasting functions.
