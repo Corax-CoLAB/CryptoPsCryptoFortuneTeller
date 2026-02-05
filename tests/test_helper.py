@@ -12,7 +12,8 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     calculate_rsi,
     calculate_macd,
     calculate_bollinger_bands,
-    calculate_moon_math
+    calculate_moon_math,
+    calculate_roi
 )
 
 def test_compute_volatility():
@@ -63,11 +64,24 @@ def test_calculate_moon_math():
     assert target_price == 20.0
     assert upside == 100.0 # (20 - 10) / 10 * 100 = 100%
 
-    # Test case 2: Zero supply (should return 0)
-    assert calculate_moon_math(10, 0, 1000) == 0
+    # Test case 2: Zero supply (should return 0, 0)
+    assert calculate_moon_math(10, 0, 1000) == (0, 0)
 
     # Test case 3: Target lower than current (negative upside)
     target_mc_low = 5_000_000.0 # Implies target price 5
     t_price, up = calculate_moon_math(10, 1_000_000, target_mc_low)
     assert t_price == 5.0
     assert up == -50.0
+
+def test_calculate_moon_math_zero_price():
+    # Test case 4: Zero current price (should handle gracefully)
+    t_price, up = calculate_moon_math(0, 1_000_000, 20_000_000)
+    # Should return 0, 0 or similar to avoid crash
+    assert t_price == 0
+    assert up == 0
+
+def test_calculate_roi_zero_investment():
+    # Test case: Zero initial investment
+    val, pct = calculate_roi(0, 10, 20)
+    assert val == 0
+    assert pct == 0

@@ -583,6 +583,11 @@ def calculate_roi(initial_investment, initial_price, current_price):
     amount_bought = initial_investment / initial_price
     current_value = amount_bought * current_price
     profit = current_value - initial_investment
+
+    # Sentinel: Prevent division by zero
+    if initial_investment == 0:
+        return current_value, 0.0
+
     roi_pct = (profit / initial_investment) * 100
 
     return current_value, roi_pct
@@ -592,8 +597,14 @@ def calculate_moon_math(current_price, current_supply, target_market_cap):
     Calculate price required to reach a target market cap.
     """
     if current_supply == 0:
-        return 0
+        return 0, 0 # Sentinel: Return tuple to match expected unpacking
+
     target_price = target_market_cap / current_supply
+
+    # Sentinel: Prevent division by zero
+    if current_price == 0:
+        return 0, 0
+
     upside = ((target_price - current_price) / current_price) * 100
     return target_price, upside
 
