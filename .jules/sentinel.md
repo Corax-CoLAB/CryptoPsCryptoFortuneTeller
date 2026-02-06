@@ -27,3 +27,8 @@
 **Vulnerability:** Forecasting models (LSTM, ARIMA, Prophet) accepted unbounded `periods` and `history` length. A malicious or accidental request with extremely large values (e.g., 10,000 days forecast) caused excessive computation time (DoS) and potential memory exhaustion.
 **Learning:** Data science models are often computationally expensive. Always enforce strict limits on input dimensions (e.g., history length, forecast horizon) at the model function level, regardless of UI constraints.
 **Prevention:** Implemented `MAX_FORECAST_HORIZON` (365) and `MAX_HISTORY_LENGTH` (2000) constants in `cryptop_crypto_fortune_teller_models.py` and enforced them in all forecasting functions.
+
+## 2026-07-01 - [High Risk] Insecure URL Construction
+**Vulnerability:** User input (`coin_id`) was directly interpolated into a `requests.get` URL string. While the input source (CoinGecko list) is currently trusted, this pattern allows for potential injection or path traversal if the source is compromised or the logic changes.
+**Learning:** Never trust input when constructing URLs, even if it comes from an API. F-string interpolation for URLs bypasses standard encoding mechanisms.
+**Prevention:** Refactored to use `requests.get(..., params=params)` for query parameters and added strict regex validation (`^[a-z0-9\-\.]+$`) for path parameters. Added `tests/test_requests_security.py` to statically detect literal query strings in `requests` calls.
