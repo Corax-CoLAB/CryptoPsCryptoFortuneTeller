@@ -9,6 +9,7 @@ from plotly.subplots import make_subplots
 import datetime
 import requests
 import html
+import re
 
 from modules.cryptop_crypto_fortune_teller_helper import (
     get_coin_list,
@@ -625,11 +626,22 @@ with tab7:
         if st.button("Calculate Moon Price"):
             with st.spinner("Crunching the numbers..."):
                 try:
-                    # 🛡️ Sentinel: Added timeout for security and reliability
-                    response = requests.get(
-                        f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false",
-                        timeout=10
-                    )
+                    # 🛡️ Sentinel: Input Validation for coin_id to prevent injection
+                    if not re.match(r'^[a-z0-9\-\.]+$', coin_id):
+                         st.error("Invalid Asset ID.")
+                         st.stop()
+
+                    # 🛡️ Sentinel: Use params for query parameters instead of f-string
+                    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}"
+                    params = {
+                        'localization': 'false',
+                        'tickers': 'false',
+                        'market_data': 'true',
+                        'community_data': 'false',
+                        'developer_data': 'false',
+                        'sparkline': 'false'
+                    }
+                    response = requests.get(url, params=params, timeout=10)
                     response.raise_for_status()
                     d = response.json()
                     supply = d.get('market_data', {}).get('circulating_supply')
