@@ -9,7 +9,6 @@ from plotly.subplots import make_subplots
 import datetime
 import requests
 import html
-import re
 
 from modules.cryptop_crypto_fortune_teller_helper import (
     get_coin_list,
@@ -33,7 +32,8 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     calculate_moon_math,
     get_coin_market_cap_batch,
     check_risk_level,
-    generate_trading_signal
+    generate_trading_signal,
+    validate_coin_id
 )
 from modules.cryptop_crypto_fortune_teller_models import (
     forecast_general_ensemble
@@ -84,6 +84,11 @@ with st.sidebar:
     with st.expander("🪙 Asset Selection", expanded=True):
         selected_option = st.selectbox("Select Cryptocurrency", options, index=0, help="Search and select the cryptocurrency you want to analyze.")
         coin_id = mapping[selected_option]
+
+        # 🛡️ Sentinel: Global Input Validation for coin_id
+        if not validate_coin_id(coin_id):
+            st.error("Invalid Asset ID detected. Please select a valid asset.")
+            st.stop()
 
     with st.expander("🔮 Forecast Settings", expanded=True):
         st.markdown("### ⚙️ Model Ensemble")
@@ -627,7 +632,8 @@ with tab7:
             with st.spinner("Crunching the numbers..."):
                 try:
                     # 🛡️ Sentinel: Input Validation for coin_id to prevent injection
-                    if not re.match(r'^[a-z0-9\-\.]+$', coin_id):
+                    # (Redundant due to global check, but kept for defense in depth)
+                    if not validate_coin_id(coin_id):
                          st.error("Invalid Asset ID.")
                          st.stop()
 
