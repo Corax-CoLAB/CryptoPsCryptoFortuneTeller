@@ -5,10 +5,24 @@ from pycoingecko import CoinGeckoAPI
 import streamlit as st
 import requests
 import concurrent.futures
+import re
 
 # Initialize CoinGecko client (public demo API)
 cg = CoinGeckoAPI()
 cg.request_timeout = 20  # Sentinel: Enforce timeout to prevent hanging
+
+def validate_coin_id(coin_id):
+    """
+    Validate coin_id to ensure it only contains safe characters.
+    Valid characters: a-z, 0-9, -, ., _
+    """
+    if not isinstance(coin_id, str):
+        return False
+    # Alphanumeric, hyphen, dot, underscore are standard in CoinGecko IDs
+    # Blocks path traversal (/) and script injection (<>)
+    if not re.match(r'^[a-z0-9\-\._]+$', coin_id):
+        return False
+    return True
 
 @st.cache_data(ttl=86400) # Cache list for 24 hours
 def get_coin_list():
@@ -50,6 +64,11 @@ def get_historical_prices(coin_id, vs_currency='usd', days=365):
     Returns DataFrame with date index and 'close' prices.
     Implements a Tiered Caching Strategy (Bucket 1, 90, or Max) to preserve resolution.
     """
+    # Sentinel: Validate coin_id
+    if not validate_coin_id(coin_id):
+        st.error(f"Invalid coin ID: {coin_id}")
+        return pd.DataFrame()
+
     # Determine cache bucket to preserve resolution
     try:
         days_val = float(days)
@@ -111,6 +130,11 @@ def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
     Returns DataFrame with date index and columns ['open','high','low','close'].
     Implements a Tiered Caching Strategy (Bucket 1, 30, or Max) to preserve resolution while minimizing API calls.
     """
+    # Sentinel: Validate coin_id
+    if not validate_coin_id(coin_id):
+        st.error(f"Invalid coin ID: {coin_id}")
+        return pd.DataFrame()
+
     # Determine cache bucket to preserve resolution
     try:
         days_val = float(days)
@@ -241,6 +265,10 @@ def get_coin_metrics(coin_id):
     Fetch additional metrics for a coin: community and developer data.
     Uses CoinGecko API to get community (social) and developer stats.
     """
+    # Sentinel: Validate coin_id
+    if not validate_coin_id(coin_id):
+        return {}
+
     try:
         data = cg.get_coin_by_id(id=coin_id, localization='false', tickers='false',
                                  market_data='false', community_data='true', developer_data='true', sparkline='false')
