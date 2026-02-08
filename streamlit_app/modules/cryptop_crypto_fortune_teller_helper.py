@@ -234,13 +234,18 @@ def check_risk_level(df):
     if df.empty or len(df) < 15:
         return None
 
-    # Calculate volatility
-    vol_data = compute_volatility(df, window=14)
-    if vol_data.empty:
+    # Calculate volatility (rolling standard deviation)
+    # Optimized: Compute directly on series to avoid overhead of full DataFrame creation in compute_volatility
+    if 'close' not in df:
         return None
 
-    current_vol = vol_data['rolling_std'].iloc[-1]
-    avg_vol = vol_data['rolling_std'].mean()
+    rolling_std = df['close'].rolling(14).std()
+
+    if rolling_std.empty:
+        return None
+
+    current_vol = rolling_std.iloc[-1]
+    avg_vol = rolling_std.mean()
 
     # Thresholds: If current volatility is > 2x average, it's High Risk
     if current_vol > 2 * avg_vol:
