@@ -11,6 +11,10 @@ import re
 cg = CoinGeckoAPI()
 cg.request_timeout = 20  # Sentinel: Enforce timeout to prevent hanging
 
+# Sentinel: Prevent Timedelta Overflow (DoS)
+# pandas Timedelta limit is ~106,752 days.
+MAX_HISTORY_DAYS = 20000
+
 def validate_coin_id(coin_id):
     """
     Validate coin_id to ensure it only contains safe characters.
@@ -97,6 +101,9 @@ def get_historical_prices(coin_id, vs_currency='usd', days=365):
 
     try:
         days_int = float(days)
+        # Sentinel: Check bounds to prevent Timedelta overflow/underflow crash
+        if days_int > MAX_HISTORY_DAYS or days_int < 0:
+            return df
     except (ValueError, TypeError):
         # Fallback if days cannot be converted to number, return full history
         return df
@@ -104,8 +111,12 @@ def get_historical_prices(coin_id, vs_currency='usd', days=365):
     # Slice the dataframe to the requested number of days
     # Use UTC for consistency as CoinGecko timestamps are UTC based.
     # df['date'] (index) is naive UTC.
-    cutoff_date = pd.Timestamp.utcnow().replace(tzinfo=None) - pd.Timedelta(days=days_int)
-    return df[df.index >= cutoff_date]
+    try:
+        cutoff_date = pd.Timestamp.utcnow().replace(tzinfo=None) - pd.Timedelta(days=days_int)
+        return df[df.index >= cutoff_date]
+    except (pd.errors.OutOfBoundsTimedelta, OverflowError, ValueError):
+        # Fallback for any other overflow issues
+        return df
 
 @st.cache_data(ttl=3600)
 def _fetch_historical_ohlc_cached(coin_id, vs_currency='usd', days='max'):
@@ -161,9 +172,16 @@ def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
     if days == 'max':
         return df
 
+    # Sentinel: Check bounds for days_val (which is already float or max)
+    if days_val > MAX_HISTORY_DAYS or days_val < 0:
+        return df
+
     # Slice the dataframe to the requested number of days
-    cutoff_date = pd.Timestamp.utcnow().replace(tzinfo=None) - pd.Timedelta(days=days_val)
-    return df[df.index >= cutoff_date]
+    try:
+        cutoff_date = pd.Timestamp.utcnow().replace(tzinfo=None) - pd.Timedelta(days=days_val)
+        return df[df.index >= cutoff_date]
+    except (pd.errors.OutOfBoundsTimedelta, OverflowError, ValueError):
+        return df
 
 def compute_volatility(df, window=14):
     """
