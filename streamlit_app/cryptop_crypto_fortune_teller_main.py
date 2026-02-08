@@ -7,7 +7,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import datetime
-import requests
 import html
 
 from modules.cryptop_crypto_fortune_teller_helper import (
@@ -31,6 +30,7 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     calculate_roi,
     calculate_moon_math,
     get_coin_market_cap_batch,
+    get_coin_market_data,
     check_risk_level,
     generate_trading_signal,
     validate_coin_id
@@ -637,23 +637,11 @@ with tab7:
                          st.error("Invalid Asset ID.")
                          st.stop()
 
-                    # 🛡️ Sentinel: Use params for query parameters instead of f-string
-                    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}"
-                    params = {
-                        'localization': 'false',
-                        'tickers': 'false',
-                        'market_data': 'true',
-                        'community_data': 'false',
-                        'developer_data': 'false',
-                        'sparkline': 'false'
-                    }
-                    response = requests.get(url, params=params, timeout=10)
-                    response.raise_for_status()
-                    d = response.json()
-                    supply = d.get('market_data', {}).get('circulating_supply')
-                    curr_p = d.get('market_data', {}).get('current_price', {}).get('usd')
+                    market_data = get_coin_market_data(coin_id)
+                    supply = market_data.get('circulating_supply')
+                    curr_p = market_data.get('current_price')
 
-                    if supply:
+                    if supply and curr_p is not None:
                         t_price, upside = calculate_moon_math(curr_p, supply, mc_target_input)
                         st.metric("Target Price", f"${t_price:,.4f}", delta=f"{upside:.2f}%")
                         st.write(f"Circulating Supply: {supply:,.0f}")
