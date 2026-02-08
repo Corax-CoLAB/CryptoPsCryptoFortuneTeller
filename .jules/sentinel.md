@@ -32,3 +32,8 @@
 **Vulnerability:** User input (`coin_id`) was directly interpolated into a `requests.get` URL string. While the input source (CoinGecko list) is currently trusted, this pattern allows for potential injection or path traversal if the source is compromised or the logic changes.
 **Learning:** Never trust input when constructing URLs, even if it comes from an API. F-string interpolation for URLs bypasses standard encoding mechanisms.
 **Prevention:** Refactored to use `requests.get(..., params=params)` for query parameters and added strict regex validation (`^[a-z0-9\-\.]+$`) for path parameters. Added `tests/test_requests_security.py` to statically detect literal query strings in `requests` calls.
+
+## 2026-08-01 - [DoS Risk] Timedelta Overflow
+**Vulnerability:** User-controlled `days` parameter in historical data fetching caused a `pd.errors.OutOfBoundsTimedelta` exception (DoS) when exceeding pandas' timestamp limits (~106k days).
+**Learning:** Libraries like pandas have internal limits (e.g., Timestamp range) that are not always obvious. Input validation must account for these library-specific constraints, not just logical business rules.
+**Prevention:** Introduced `MAX_HISTORY_DAYS` constant and wrapped `pd.Timedelta` calculations in `try...except` blocks to handle overflows gracefully.
