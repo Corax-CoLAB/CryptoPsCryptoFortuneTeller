@@ -318,6 +318,37 @@ def get_coin_metrics(coin_id):
         st.error(f"Error fetching coin metrics: {e}")
         return {}
 
+@st.cache_data(ttl=60)
+def get_coin_market_data(coin_id):
+    """
+    Fetch market data for a specific coin (price, circulating supply).
+    """
+    # Sentinel: Validate coin_id
+    if not validate_coin_id(coin_id):
+        return {}
+
+    try:
+        data = cg.get_coin_by_id(
+            id=coin_id,
+            localization='false',
+            tickers='false',
+            market_data='true',
+            community_data='false',
+            developer_data='false',
+            sparkline='false'
+        )
+        market_data = data.get('market_data', {})
+        if not market_data:
+            return {}
+
+        return {
+            'current_price': market_data.get('current_price', {}).get('usd'),
+            'circulating_supply': market_data.get('circulating_supply')
+        }
+    except Exception as e:
+        st.error(f"Error fetching coin market data: {e}")
+        return {}
+
 @st.cache_data(ttl=3600)
 def get_fear_and_greed_index():
     """

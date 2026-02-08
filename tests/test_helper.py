@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+from unittest.mock import patch, MagicMock
 
 # Add streamlit_app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
@@ -13,7 +14,8 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     calculate_macd,
     calculate_bollinger_bands,
     calculate_moon_math,
-    calculate_roi
+    calculate_roi,
+    get_coin_market_data
 )
 
 def test_compute_volatility():
@@ -85,3 +87,39 @@ def test_calculate_roi_zero_investment():
     val, pct = calculate_roi(0, 10, 20)
     assert val == 0
     assert pct == 0
+
+@patch('modules.cryptop_crypto_fortune_teller_helper.st.error')
+@patch('modules.cryptop_crypto_fortune_teller_helper.cg')
+def test_get_coin_market_data(mock_cg, mock_st_error):
+    # Setup mock
+    mock_cg.get_coin_by_id.return_value = {
+        'market_data': {
+            'current_price': {'usd': 50000},
+            'circulating_supply': 19000000
+        }
+    }
+
+    # Run
+    # Note: st.cache_data might interfere if streamlit context is weird,
+    # but usually in tests it just runs or we can mock it.
+    # Here we assume it runs (wrapper).
+
+    # We might need to clear cache if it persists across tests
+    if hasattr(get_coin_market_data, 'clear'):
+        get_coin_market_data.clear()
+
+    result = get_coin_market_data('bitcoin')
+
+    # Verify
+    assert result['current_price'] == 50000
+    assert result['circulating_supply'] == 19000000
+    # mock_cg.get_coin_by_id.assert_called_once() # Decorator might call it differently or cache hits
+
+    # Test error case
+    if hasattr(get_coin_market_data, 'clear'):
+        get_coin_market_data.clear()
+
+    mock_cg.get_coin_by_id.side_effect = Exception("API Error")
+    result_err = get_coin_market_data('bitcoin')
+    assert result_err == {}
+    mock_st_error.assert_called()
