@@ -508,8 +508,19 @@ def get_batch_historical_prices(coin_ids: list, days: int = 90) -> pd.DataFrame:
     """
     # 🛡️ Sentinel: Limit batch size to prevent API abuse/DoS
     MAX_BATCH_SIZE = 10
+
+    if not coin_ids:
+        return pd.DataFrame()
+
+    # Ensure list and deduplicate to prevent redundant API calls
+    if not isinstance(coin_ids, list):
+        coin_ids = list(coin_ids)
+
+    # Deduplicate while preserving order (Python 3.7+ dicts preserve insertion order)
+    coin_ids = list(dict.fromkeys(coin_ids))
+
     if len(coin_ids) > MAX_BATCH_SIZE:
-        st.warning(f"⚠️ Security Limit: Request truncated to first {MAX_BATCH_SIZE} assets to prevent API rate limit exhaustion.")
+        st.warning(f"⚠️ Security Limit: Request truncated to first {MAX_BATCH_SIZE} unique assets to prevent API rate limit exhaustion.")
         coin_ids = coin_ids[:MAX_BATCH_SIZE]
 
     dfs = []

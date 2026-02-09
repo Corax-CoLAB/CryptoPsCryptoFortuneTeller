@@ -54,5 +54,28 @@ class TestOptimization(unittest.TestCase):
         mock_st.warning.assert_called_once()
         print("Security limit verified!")
 
+    @patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.get_historical_prices')
+    def test_batch_prices_deduplication(self, mock_get_prices):
+        # 🛡️ Sentinel Test: Verify deduplication of inputs to prevent DoS
+
+        # Setup mock
+        dates = pd.date_range('2023-01-01', periods=1)
+        mock_get_prices.return_value = pd.DataFrame({'close': [100]}, index=dates)
+
+        # Duplicate inputs
+        coin_ids = ['bitcoin', 'bitcoin', 'bitcoin']
+
+        # Run
+        res = get_batch_historical_prices(coin_ids)
+
+        # Verify result has 1 column
+        self.assertEqual(res.shape[1], 1, "Should deduplicate identical inputs")
+        self.assertIn('bitcoin', res.columns)
+
+        # Verify API called once
+        # In multi-threaded context, side_effect tracking is safe because we verify the mock
+        self.assertEqual(mock_get_prices.call_count, 1, "Should call API only once for unique ID")
+        print("Deduplication verified!")
+
 if __name__ == '__main__':
     unittest.main()
