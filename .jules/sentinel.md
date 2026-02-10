@@ -37,3 +37,8 @@
 **Vulnerability:** User-controlled `days` parameter in historical data fetching caused a `pd.errors.OutOfBoundsTimedelta` exception (DoS) when exceeding pandas' timestamp limits (~106k days).
 **Learning:** Libraries like pandas have internal limits (e.g., Timestamp range) that are not always obvious. Input validation must account for these library-specific constraints, not just logical business rules.
 **Prevention:** Introduced `MAX_HISTORY_DAYS` constant and wrapped `pd.Timedelta` calculations in `try...except` blocks to handle overflows gracefully.
+
+## 2026-09-01 - [High Risk] Incomplete XSS Scanning
+**Vulnerability:** The existing XSS scanner only detected unsafe f-strings in `st.markdown`, missing string concatenation, `.format()`, `%` formatting, and direct variable usage, which could allow XSS if developers used older string formatting methods.
+**Learning:** Security tools must account for all valid Python syntax for string construction, not just the most common ones. Gaps in static analysis create a false sense of security.
+**Prevention:** Enhanced `tests/test_xss_scanner.py` to detect `ast.BinOp` (concatenation/modulo), `ast.Call` (.format), and `ast.Name` (variables) in sensitive sinks, preventing these bypasses.
