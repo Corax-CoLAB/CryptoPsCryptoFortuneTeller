@@ -42,3 +42,8 @@
 **Vulnerability:** The existing XSS scanner only detected unsafe f-strings in `st.markdown`, missing string concatenation, `.format()`, `%` formatting, and direct variable usage, which could allow XSS if developers used older string formatting methods.
 **Learning:** Security tools must account for all valid Python syntax for string construction, not just the most common ones. Gaps in static analysis create a false sense of security.
 **Prevention:** Enhanced `tests/test_xss_scanner.py` to detect `ast.BinOp` (concatenation/modulo), `ast.Call` (.format), and `ast.Name` (variables) in sensitive sinks, preventing these bypasses.
+
+## 2026-10-15 - [Medium Risk] Missing API Error Handling
+**Vulnerability:** The `get_fear_and_greed_index` function failed to check the HTTP status code of the external API response (`requests.get`), potentially leading to silent failures or processing of invalid data (e.g., 500 error body) as valid JSON.
+**Learning:** Relying solely on `try...except` blocks without checking `response.ok` or calling `raise_for_status()` masks critical upstream failures and can lead to unpredictable application state or confusing error messages.
+**Prevention:** Enforced usage of `response.raise_for_status()` immediately after all `requests` calls and added a test case (`tests/test_fng_security.py`) to verify correct error propagation.
