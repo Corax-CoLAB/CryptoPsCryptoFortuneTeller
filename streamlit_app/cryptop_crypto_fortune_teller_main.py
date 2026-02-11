@@ -1,6 +1,7 @@
 # cryptop_crypto_fortune_teller_main.py
 
 import streamlit as st
+import logging
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -38,6 +39,8 @@ from modules.cryptop_crypto_fortune_teller_helper import (
 from modules.cryptop_crypto_fortune_teller_models import (
     forecast_general_ensemble
 )
+from modules.exchange_manager import ExchangeManager
+from modules.freqtrade_manager import FreqtradeManager
 from modules.cryptop_crypto_fortune_teller_styles import apply_custom_css
 
 # 1) Page config
@@ -147,7 +150,7 @@ with st.sidebar:
     st.info("Note: Prediction models are for educational purposes only. Not financial advice.")
 
 # 5) Main Content Tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
     "🔮 Forecast",
     "📊 Analysis",
     "⚖️ Compare",
@@ -156,6 +159,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "🌍 Market",
     "🧮 Calculators",
     "🔧 Stats",
+    "🔌 Connect",
     "🧙 About"
 ])
 
@@ -295,117 +299,119 @@ with tab2:
         show_pivot = col_ind3.checkbox("Pivot Points")
 
     with st.spinner("Analyzing market patterns..."):
+        # Fetch OHLC
         ohlc_df = get_historical_ohlc(coin_id, days=days_back)
         if ohlc_df.empty:
             ohlc_df = get_historical_prices(coin_id, days=days_back)
-            if ohlc_df.empty:
-                st.error("No data available.")
-                st.stop()
-            ohlc_df['open'] = ohlc_df['close']
-            ohlc_df['high'] = ohlc_df['close']
-            ohlc_df['low'] = ohlc_df['close']
+            if not ohlc_df.empty:
+                ohlc_df['open'] = ohlc_df['close']
+                ohlc_df['high'] = ohlc_df['close']
+                ohlc_df['low'] = ohlc_df['close']
 
-        # Calculations
-        bb_df = calculate_bollinger_bands(ohlc_df) if show_bb else pd.DataFrame()
-        ichi_df = calculate_ichimoku_cloud(ohlc_df) if show_ichi else pd.DataFrame()
-        fib_levels = calculate_fibonacci_levels(ohlc_df) if show_fib else {}
-        stoch_df = calculate_stochastic_oscillator(ohlc_df) if show_stoch else pd.DataFrame()
-        pivot_points = calculate_pivot_points(ohlc_df) if show_pivot else {}
+        if ohlc_df.empty:
+            st.error("No data available.")
+        else:
+            # Calculations
+            bb_df = calculate_bollinger_bands(ohlc_df) if show_bb else pd.DataFrame()
+            ichi_df = calculate_ichimoku_cloud(ohlc_df) if show_ichi else pd.DataFrame()
+            fib_levels = calculate_fibonacci_levels(ohlc_df) if show_fib else {}
+            stoch_df = calculate_stochastic_oscillator(ohlc_df) if show_stoch else pd.DataFrame()
+            pivot_points = calculate_pivot_points(ohlc_df) if show_pivot else {}
 
-        # Plot 1: Main Chart
-        fig_main = go.Figure()
-        fig_main.add_trace(go.Candlestick(
-            x=ohlc_df.index, open=ohlc_df['open'], high=ohlc_df['high'],
-            low=ohlc_df['low'], close=ohlc_df['close'], name='OHLC'
-        ))
+            # Plot 1: Main Chart
+            fig_main = go.Figure()
+            fig_main.add_trace(go.Candlestick(
+                x=ohlc_df.index, open=ohlc_df['open'], high=ohlc_df['high'],
+                low=ohlc_df['low'], close=ohlc_df['close'], name='OHLC'
+            ))
 
-        # Bollinger Bands
-        if not bb_df.empty:
-            fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Upper'], line=dict(color='#bd93f9', width=1), name='BB Upper'))
-            fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Lower'], line=dict(color='#bd93f9', width=1), name='BB Lower', fill='tonexty', fillcolor='rgba(189, 147, 249, 0.1)'))
-            fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['SMA'], line=dict(color='#FFD700', width=1), name='BB SMA 20'))
+            # Bollinger Bands
+            if not bb_df.empty:
+                fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Upper'], line=dict(color='#bd93f9', width=1), name='BB Upper'))
+                fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Lower'], line=dict(color='#bd93f9', width=1), name='BB Lower', fill='tonexty', fillcolor='rgba(189, 147, 249, 0.1)'))
+                fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['SMA'], line=dict(color='#FFD700', width=1), name='BB SMA 20'))
 
-        # Ichimoku
-        if not ichi_df.empty:
-            fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['SpanA'], line=dict(width=0), showlegend=False, name='Span A'))
-            fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['SpanB'], line=dict(width=0), fill='tonexty', fillcolor='rgba(0, 255, 255, 0.1)', name='Ichimoku Cloud'))
-            fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['Tenkan'], line=dict(color='#00FFFF', width=1), name='Tenkan'))
-            fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['Kijun'], line=dict(color='#FF4500', width=1), name='Kijun'))
+            # Ichimoku
+            if not ichi_df.empty:
+                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['SpanA'], line=dict(width=0), showlegend=False, name='Span A'))
+                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['SpanB'], line=dict(width=0), fill='tonexty', fillcolor='rgba(0, 255, 255, 0.1)', name='Ichimoku Cloud'))
+                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['Tenkan'], line=dict(color='#00FFFF', width=1), name='Tenkan'))
+                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['Kijun'], line=dict(color='#FF4500', width=1), name='Kijun'))
 
-        # SMA Ribbon
-        if show_sma:
-            colors = ['#FF0000', '#FFA500', '#FFFF00', '#008000']
-            for i, period in enumerate([20, 50, 100, 200]):
-                sma = ohlc_df['close'].rolling(window=period).mean()
-                fig_main.add_trace(go.Scatter(x=ohlc_df.index, y=sma, line=dict(color=colors[i], width=1), name=f'SMA {period}'))
+            # SMA Ribbon
+            if show_sma:
+                colors = ['#FF0000', '#FFA500', '#FFFF00', '#008000']
+                for i, period in enumerate([20, 50, 100, 200]):
+                    sma = ohlc_df['close'].rolling(window=period).mean()
+                    fig_main.add_trace(go.Scatter(x=ohlc_df.index, y=sma, line=dict(color=colors[i], width=1), name=f'SMA {period}'))
 
-        # Fibonacci
-        if show_fib:
-            for label, val in fib_levels.items():
-                fig_main.add_hline(y=val, line_dash="dot", line_color="gray", annotation_text=label)
+            # Fibonacci
+            if show_fib:
+                for label, val in fib_levels.items():
+                    fig_main.add_hline(y=val, line_dash="dot", line_color="gray", annotation_text=label)
 
-        # Annotations (Max/Min)
-        max_idx = ohlc_df['high'].idxmax()
-        min_idx = ohlc_df['low'].idxmin()
-        fig_main.add_annotation(x=max_idx, y=ohlc_df.loc[max_idx]['high'], text="Max", showarrow=True, arrowhead=1)
-        fig_main.add_annotation(x=min_idx, y=ohlc_df.loc[min_idx]['low'], text="Min", showarrow=True, arrowhead=1)
+            # Annotations (Max/Min)
+            max_idx = ohlc_df['high'].idxmax()
+            min_idx = ohlc_df['low'].idxmin()
+            fig_main.add_annotation(x=max_idx, y=ohlc_df.loc[max_idx]['high'], text="Max", showarrow=True, arrowhead=1)
+            fig_main.add_annotation(x=min_idx, y=ohlc_df.loc[min_idx]['low'], text="Min", showarrow=True, arrowhead=1)
 
-        fig_main.update_layout(title="Price Action", template="plotly_dark", xaxis_rangeslider_visible=False, height=600)
-        st.plotly_chart(fig_main, use_container_width=True)
+            fig_main.update_layout(title="Price Action", template="plotly_dark", xaxis_rangeslider_visible=False, height=600)
+            st.plotly_chart(fig_main, use_container_width=True)
 
-        # Pivot Points Display
-        if show_pivot and pivot_points:
-            st.write("**Daily Pivot Points (Projected):**")
-            cols = st.columns(7)
-            cols[0].metric("S3", f"{pivot_points['S3']:.2f}")
-            cols[1].metric("S2", f"{pivot_points['S2']:.2f}")
-            cols[2].metric("S1", f"{pivot_points['S1']:.2f}")
-            cols[3].metric("Pivot", f"{pivot_points['Pivot']:.2f}")
-            cols[4].metric("R1", f"{pivot_points['R1']:.2f}")
-            cols[5].metric("R2", f"{pivot_points['R2']:.2f}")
-            cols[6].metric("R3", f"{pivot_points['R3']:.2f}")
+            # Pivot Points Display
+            if show_pivot and pivot_points:
+                st.write("**Daily Pivot Points (Projected):**")
+                cols = st.columns(7)
+                cols[0].metric("S3", f"{pivot_points['S3']:.2f}")
+                cols[1].metric("S2", f"{pivot_points['S2']:.2f}")
+                cols[2].metric("S1", f"{pivot_points['S1']:.2f}")
+                cols[3].metric("Pivot", f"{pivot_points['Pivot']:.2f}")
+                cols[4].metric("R1", f"{pivot_points['R1']:.2f}")
+                cols[5].metric("R2", f"{pivot_points['R2']:.2f}")
+                cols[6].metric("R3", f"{pivot_points['R3']:.2f}")
 
-        # Sub-charts: RSI, Stoch, MACD
-        st.markdown("### Indicators")
+            # Sub-charts: RSI, Stoch, MACD
+            st.markdown("### Indicators")
 
-        # Stochastic
-        if show_stoch and not stoch_df.empty:
-            fig_stoch = go.Figure()
-            fig_stoch.add_trace(go.Scatter(x=stoch_df.index, y=stoch_df['%K'], name='%K', line=dict(color='#00FFFF')))
-            fig_stoch.add_trace(go.Scatter(x=stoch_df.index, y=stoch_df['%D'], name='%D', line=dict(color='#FF4500')))
-            fig_stoch.add_hline(y=80, line_dash="dot", line_color="red")
-            fig_stoch.add_hline(y=20, line_dash="dot", line_color="green")
-            fig_stoch.update_layout(title="Stochastic Oscillator", template="plotly_dark", height=250, yaxis_range=[0, 100])
-            st.plotly_chart(fig_stoch, use_container_width=True)
+            # Stochastic
+            if show_stoch and not stoch_df.empty:
+                fig_stoch = go.Figure()
+                fig_stoch.add_trace(go.Scatter(x=stoch_df.index, y=stoch_df['%K'], name='%K', line=dict(color='#00FFFF')))
+                fig_stoch.add_trace(go.Scatter(x=stoch_df.index, y=stoch_df['%D'], name='%D', line=dict(color='#FF4500')))
+                fig_stoch.add_hline(y=80, line_dash="dot", line_color="red")
+                fig_stoch.add_hline(y=20, line_dash="dot", line_color="green")
+                fig_stoch.update_layout(title="Stochastic Oscillator", template="plotly_dark", height=250, yaxis_range=[0, 100])
+                st.plotly_chart(fig_stoch, use_container_width=True)
 
-        col_a1, col_a2 = st.columns(2)
+            col_a1, col_a2 = st.columns(2)
 
-        with col_a1:
-            rsi = calculate_rsi(ohlc_df)
-            fig_rsi = go.Figure()
-            fig_rsi.add_trace(go.Scatter(x=rsi.index, y=rsi, name='RSI', line=dict(color='#FF4500')))
-            fig_rsi.add_hline(y=70, line_dash="dot", line_color="red")
-            fig_rsi.add_hline(y=30, line_dash="dot", line_color="green")
-            fig_rsi.update_layout(title="RSI", template="plotly_dark", height=250, yaxis_range=[0, 100])
-            st.plotly_chart(fig_rsi, use_container_width=True)
+            with col_a1:
+                rsi = calculate_rsi(ohlc_df)
+                fig_rsi = go.Figure()
+                fig_rsi.add_trace(go.Scatter(x=rsi.index, y=rsi, name='RSI', line=dict(color='#FF4500')))
+                fig_rsi.add_hline(y=70, line_dash="dot", line_color="red")
+                fig_rsi.add_hline(y=30, line_dash="dot", line_color="green")
+                fig_rsi.update_layout(title="RSI", template="plotly_dark", height=250, yaxis_range=[0, 100])
+                st.plotly_chart(fig_rsi, use_container_width=True)
 
-        with col_a2:
-            macd_df = calculate_macd(ohlc_df)
-            if not macd_df.empty:
-                fig_macd = make_subplots(specs=[[{"secondary_y": False}]])
-                fig_macd.add_trace(go.Bar(x=macd_df.index, y=macd_df['Histogram'], name='Hist', marker_color='#444'))
-                fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['MACD'], name='MACD', line=dict(color='#00FFFF')))
-                fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['Signal'], name='Signal', line=dict(color='#FF4500')))
-                fig_macd.update_layout(title="MACD", template="plotly_dark", height=250)
-                st.plotly_chart(fig_macd, use_container_width=True)
+            with col_a2:
+                macd_df = calculate_macd(ohlc_df)
+                if not macd_df.empty:
+                    fig_macd = make_subplots(specs=[[{"secondary_y": False}]])
+                    fig_macd.add_trace(go.Bar(x=macd_df.index, y=macd_df['Histogram'], name='Hist', marker_color='#444'))
+                    fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['MACD'], name='MACD', line=dict(color='#00FFFF')))
+                    fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['Signal'], name='Signal', line=dict(color='#FF4500')))
+                    fig_macd.update_layout(title="MACD", template="plotly_dark", height=250)
+                    st.plotly_chart(fig_macd, use_container_width=True)
 
-        # Export Data
-        st.download_button(
-            label="📥 Download Historical Data CSV",
-            data=ohlc_df.to_csv().encode('utf-8'),
-            file_name=f'{coin_id}_history.csv',
-            mime='text/csv',
-        )
+            # Export Data
+            st.download_button(
+                label="📥 Download Historical Data CSV",
+                data=ohlc_df.to_csv().encode('utf-8'),
+                file_name=f'{coin_id}_history.csv',
+                mime='text/csv',
+            )
 
 # --- TAB 3: COMPARE ---
 with tab3:
@@ -692,8 +698,195 @@ with tab8:
         c4.metric("Forks", metrics.get('forks', 'N/A'))
         st.json(metrics, expanded=False)
 
-# --- TAB 9: ABOUT ---
+# --- TAB 9: CONNECT ---
 with tab9:
+    st.subheader("🔌 Exchange & Bot Connectivity")
+
+    con_mode = st.radio("Connection Type", ["🏛️ Exchanges", "🤖 Freqtrade"], horizontal=True)
+
+    # === Exchange Integration ===
+    if con_mode == "🏛️ Exchanges":
+        st.write("### Connect to Crypto Exchanges")
+        st.info("Supports: Bitget, Gate, Bybit, OKX, KuCoin, Binance")
+
+        # Session State for Exchange
+        if 'exchange_client' not in st.session_state:
+            st.session_state.exchange_client = ExchangeManager()
+        if 'exchange_connected' not in st.session_state:
+            st.session_state.exchange_connected = False
+
+        # Connection Form
+        with st.expander("🔑 API Credentials", expanded=not st.session_state.exchange_connected):
+            with st.form("exchange_connect_form"):
+                ex_name = st.selectbox("Exchange", ["Bitget", "Gate.io", "Bybit", "OKX", "KuCoin", "Binance"])
+                ex_key = st.text_input("API Key", type="password")
+                ex_secret = st.text_input("API Secret", type="password")
+                ex_pass = st.text_input("Passphrase (if needed)", type="password", help="Required for OKX, KuCoin, Bitget")
+
+                submitted_ex = st.form_submit_button("Connect")
+
+                if submitted_ex:
+                    # Normalize name for CCXT
+                    ex_id_map = {
+                        "Bitget": "bitget", "Gate.io": "gate", "Bybit": "bybit",
+                        "OKX": "okx", "KuCoin": "kucoin", "Binance": "binance"
+                    }
+                    target_ex = ex_id_map[ex_name]
+
+                    success, msg = st.session_state.exchange_client.connect(target_ex, ex_key, ex_secret, ex_pass)
+                    if success:
+                        st.session_state.exchange_connected = True
+                        st.session_state.connected_exchange_name = ex_name
+                        st.success(msg)
+                    else:
+                        st.error(msg)
+
+        if st.session_state.exchange_connected:
+            st.success(f"Connected to {st.session_state.connected_exchange_name} ✅")
+
+            if st.button("Disconnect"):
+                st.session_state.exchange_connected = False
+                st.session_state.exchange_client = ExchangeManager()
+                st.experimental_rerun()
+
+            # Balance
+            st.write("#### 💰 Wallet Balance")
+            if st.button("Refresh Balance"):
+                pass
+
+            bal_df, bal_err = st.session_state.exchange_client.get_balance()
+            if bal_df is not None and not bal_df.empty:
+                st.dataframe(bal_df)
+                # Pie chart of assets
+                fig_bal = px.pie(bal_df, values='Total', names='Currency', title='Asset Allocation')
+                fig_bal.update_layout(template="plotly_dark", height=300)
+                st.plotly_chart(fig_bal, use_container_width=True)
+            elif bal_err:
+                st.error(bal_err)
+            else:
+                st.info("Balance is empty.")
+
+            # Trading Interface
+            st.markdown("---")
+            st.write("#### 📉 Trade Execution")
+
+            col_t1, col_t2 = st.columns(2)
+
+            with col_t1:
+                t_symbol = st.text_input("Symbol (e.g., BTC/USDT)", "BTC/USDT").upper()
+                t_type = st.selectbox("Order Type", ["Limit", "Market"])
+                t_side = st.selectbox("Side", ["Buy", "Sell"])
+
+            with col_t2:
+                t_amount = st.number_input("Amount", min_value=0.0, step=0.001, format="%.6f")
+                t_price = st.number_input("Price (USD)", min_value=0.0, step=0.01) if t_type == "Limit" else None
+
+            if st.button("Place Order", type="primary"):
+                if t_amount > 0:
+                    with st.spinner("Placing order..."):
+                        order, ord_msg = st.session_state.exchange_client.create_order(
+                            t_symbol, t_type.lower(), t_side.lower(), t_amount, t_price
+                        )
+                        if order:
+                            st.success(ord_msg)
+                            st.json(order)
+                        else:
+                            st.error(ord_msg)
+                else:
+                    st.warning("Amount must be greater than 0")
+
+            # Open Orders
+            st.markdown("---")
+            with st.expander("Open Orders"):
+                if st.button("Refresh Orders"):
+                    pass
+                orders_df, ord_err = st.session_state.exchange_client.fetch_open_orders(t_symbol)
+                if orders_df is not None and not orders_df.empty:
+                    st.dataframe(orders_df)
+                elif ord_err:
+                    st.error(ord_err)
+                else:
+                    st.info("No open orders.")
+
+    # === Freqtrade Integration ===
+    elif con_mode == "🤖 Freqtrade":
+        st.write("### 🤖 Freqtrade Bot Controller")
+
+        # Session State for Freqtrade
+        if 'ft_client' not in st.session_state:
+            st.session_state.ft_client = None
+        if 'ft_connected' not in st.session_state:
+            st.session_state.ft_connected = False
+
+        # Login Form
+        with st.expander("🔌 Bot Configuration", expanded=not st.session_state.ft_connected):
+            with st.form("ft_login_form"):
+                ft_url = st.text_input("API URL", "http://127.0.0.1:8080")
+                ft_user = st.text_input("Username", "freqtrader")
+                ft_pass = st.text_input("Password", type="password")
+
+                submitted_ft = st.form_submit_button("Connect Bot")
+
+                if submitted_ft:
+                    client = FreqtradeManager(ft_url, ft_user, ft_pass)
+                    # Try login
+                    success, msg = client.login()
+                    if success:
+                        st.session_state.ft_client = client
+                        st.session_state.ft_connected = True
+                        st.success(msg)
+                    else:
+                        st.error(msg)
+
+        if st.session_state.ft_connected:
+            st.success("Freqtrade Connected 🤖")
+
+            client = st.session_state.ft_client
+
+            # Controls
+            col_c1, col_c2, col_c3 = st.columns(3)
+            with col_c1:
+                if st.button("▶️ Start Bot"):
+                    res, msg = client.start_bot()
+                    if res: st.success(msg)
+                    else: st.error(msg)
+            with col_c2:
+                if st.button("⏹️ Stop Bot"):
+                    res, msg = client.stop_bot()
+                    if res: st.warning(msg)
+                    else: st.error(msg)
+            with col_c3:
+                if st.button("🔄 Refresh Status"):
+                    pass
+
+            # Status Dashboard
+            status, err = client.get_status()
+            if status:
+                st.metric("State", status.get('state', 'Unknown'))
+            elif err:
+                st.error(err)
+
+            # Profit
+            st.write("#### 📈 Performance")
+            profit, p_err = client.get_profit()
+            if profit:
+                p_col1, p_col2, p_col3 = st.columns(3)
+                p_col1.metric("Total Profit %", f"{profit.get('profit_all_coin', 0):.2f}%")
+                p_col2.metric("Total Profit (USDT)", f"{profit.get('profit_total_usdt', 0):.2f}")
+                p_col3.metric("Trade Count", profit.get('trade_count', 0))
+            elif p_err:
+                st.error(p_err)
+
+            # Whitelist
+            with st.expander("📜 Whitelist"):
+                wl, wl_err = client.get_whitelist()
+                if wl:
+                    st.write(wl)
+                elif wl_err:
+                    st.error(wl_err)
+
+# --- TAB 10: ABOUT ---
+with tab10:
     st.markdown("""
     <div style='text-align: center;'>
         <h2>🧙 The Oracle Speaks 🧙</h2>

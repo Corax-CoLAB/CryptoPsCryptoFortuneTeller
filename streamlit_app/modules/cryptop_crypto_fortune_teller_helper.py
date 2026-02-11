@@ -49,7 +49,19 @@ def _fetch_historical_prices_cached(coin_id, vs_currency='usd', days='max'):
     Uses 'days' as a resolution bucket (1, 90, or 'max') to optimize caching.
     """
     try:
-        data = cg.get_coin_market_chart_by_id(id=coin_id, vs_currency=vs_currency, days=days)
+        # Sentinel: Pass timeout to prevent hanging if supported by wrapper
+        # Using 3 seconds timeout
+        try:
+             data = cg.get_coin_market_chart_by_id(id=coin_id, vs_currency=vs_currency, days=days, timeout=3)
+        except TypeError:
+             # Fallback if timeout kwarg is not supported, or use direct request
+             # Since we know wrapper is old or custom, we force direct request here to be safe
+             url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
+             params = {'vs_currency': vs_currency, 'days': days}
+             r = requests.get(url, params=params, timeout=3)
+             r.raise_for_status()
+             data = r.json()
+
         # 'prices' is list of [timestamp, price]
         prices = data.get('prices', [])
         df = pd.DataFrame(prices, columns=['timestamp', 'close'])
@@ -356,7 +368,7 @@ def get_fear_and_greed_index():
     """
     url = "https://api.alternative.me/fng/"
     try:
-        r = requests.get(url, timeout=10)
+        r = requests.get(url, timeout=3)
         data = r.json()
         if data.get('data'):
             item = data['data'][0]
