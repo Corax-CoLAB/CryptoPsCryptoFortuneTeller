@@ -36,12 +36,13 @@ class TestProphetEnsemble(unittest.TestCase):
         mock_prophet.return_value = mock_model_instance
 
         # Mock predict return
-        future_dates = pd.date_range(start='2023-01-01', periods=130) # 100 hist + 30 forecast
+        # Since _run_prophet_model now runs for MAX_FORECAST_HORIZON (365) + History (100) = 465
+        future_dates = pd.date_range(start='2023-01-01', periods=465)
         forecast_df = pd.DataFrame({
             'ds': future_dates,
-            'yhat': np.linspace(100, 230, 130),
-            'yhat_lower': np.linspace(90, 220, 130),
-            'yhat_upper': np.linspace(110, 240, 130)
+            'yhat': np.linspace(100, 565, 465),
+            'yhat_lower': np.linspace(90, 555, 465),
+            'yhat_upper': np.linspace(110, 575, 465)
         })
         mock_model_instance.make_future_dataframe.return_value = pd.DataFrame({'ds': future_dates})
         mock_model_instance.predict.return_value = forecast_df
@@ -61,22 +62,23 @@ class TestProphetEnsemble(unittest.TestCase):
         mock_model_instance = MagicMock()
         mock_prophet.return_value = mock_model_instance
 
-        future_dates = pd.date_range(start='2023-01-01', periods=130)
+        # 100 history + 365 future = 465
+        future_dates = pd.date_range(start='2023-01-01', periods=465)
 
         # DataFrame 1 (Standard): yhat = 100
         df1 = pd.DataFrame({
             'ds': future_dates,
-            'yhat': np.full(130, 100.0),
-            'yhat_lower': np.full(130, 90.0),
-            'yhat_upper': np.full(130, 110.0)
+            'yhat': np.full(465, 100.0),
+            'yhat_lower': np.full(465, 90.0),
+            'yhat_upper': np.full(465, 110.0)
         })
 
         # DataFrame 2 (Volatile): yhat = 200
         df2 = pd.DataFrame({
             'ds': future_dates,
-            'yhat': np.full(130, 200.0),
-            'yhat_lower': np.full(130, 190.0),
-            'yhat_upper': np.full(130, 210.0)
+            'yhat': np.full(465, 200.0),
+            'yhat_lower': np.full(465, 190.0),
+            'yhat_upper': np.full(465, 210.0)
         })
 
         m1 = MagicMock()
@@ -104,14 +106,15 @@ class TestProphetEnsemble(unittest.TestCase):
         mock_model_instance = MagicMock()
         mock_prophet.return_value = mock_model_instance
 
-        future_dates = pd.date_range(start='2023-01-01', periods=130) # 100 hist + 30 future
+        # 100 history + 365 future = 465
+        future_dates = pd.date_range(start='2023-01-01', periods=465)
 
         # Constant forecast of 100
         df_base = pd.DataFrame({
             'ds': future_dates,
-            'yhat': np.full(130, 100.0),
-            'yhat_lower': np.full(130, 90.0),
-            'yhat_upper': np.full(130, 110.0)
+            'yhat': np.full(465, 100.0),
+            'yhat_lower': np.full(465, 90.0),
+            'yhat_upper': np.full(465, 110.0)
         })
 
         mock_model_instance.predict.return_value = df_base
