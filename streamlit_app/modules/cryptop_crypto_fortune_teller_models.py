@@ -19,30 +19,40 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 MAX_FORECAST_HORIZON = 365
 MAX_HISTORY_LENGTH = 2000
 
-def get_prophet_config(model_name):
+def get_prophet_config(model_name, overrides=None):
     """
     Returns hyperparameters for different Prophet model configurations.
     """
+    config = {}
     if model_name == "Volatile (Trend Chaser)":
-        return {
+        config = {
             'changepoint_prior_scale': 0.5,
             'seasonality_prior_scale': 0.01,
             'seasonality_mode': 'multiplicative',
             'daily_seasonality': True
         }
     elif model_name == "Conservative (Safe Haven)":
-        return {
+        config = {
             'changepoint_prior_scale': 0.005,
             'seasonality_prior_scale': 10.0,
             'interval_width': 0.95,
             'daily_seasonality': True
         }
     else: # Standard / Default
-        return {
+        config = {
             'changepoint_prior_scale': 0.05,
             'seasonality_prior_scale': 10.0,
             'daily_seasonality': True
         }
+
+    # Apply overrides if provided
+    if overrides:
+        # Only override keys that are explicitly set in overrides
+        for k, v in overrides.items():
+            if v is not None:
+                config[k] = v
+
+    return config
 
 @st.cache_data(ttl=3600)
 def _run_prophet_model_fixed(df, config):
@@ -285,9 +295,10 @@ def forecast_lstm(df, periods=30, n_steps=60):
     })
     return forecast_df
 
-def forecast_general_ensemble(df, model_names, periods=30, sentiment_score=0.0):
+def forecast_general_ensemble(df, model_names, periods=30, sentiment_score=0.0, model_params=None):
     """
     Grand Ensemble that can combine Prophet, LSTM, ARIMA, SARIMA.
+    Accepts model_params dict to override default configurations.
     """
     if not model_names:
         model_names = ["Prophet (Standard)"]
@@ -305,7 +316,7 @@ def forecast_general_ensemble(df, model_names, periods=30, sentiment_score=0.0):
             if p_name == "Prophet": p_name = "Standard"
 
             # Use internal prophet runner
-            config = get_prophet_config(p_name)
+            config = get_prophet_config(p_name, overrides=model_params)
             f = _run_prophet_model(df, config, periods)
 
         elif name == "LSTM":

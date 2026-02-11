@@ -681,6 +681,101 @@ def calculate_fibonacci_levels(df):
         '100.0% (Low)': min_price
     }
 
+def calculate_vwap(df):
+    """
+    Calculate Volume Weighted Average Price (VWAP).
+    Since we use daily data, this will be a Rolling VWAP (e.g., 20 days) or Cumulative from start.
+    We'll use a Rolling 20-day VWAP for trend analysis.
+    """
+    if df.empty or 'volume' not in df or 'close' not in df:
+        # Try fetching volume if missing
+        return pd.Series(dtype=float)
+
+    # Typical Price = (High + Low + Close) / 3
+    # If High/Low missing, use Close
+    if 'high' in df and 'low' in df:
+        tp = (df['high'] + df['low'] + df['close']) / 3
+    else:
+        tp = df['close']
+
+    # We need volume. If it's not in the main DF (prices often don't have volume if not from OHLC),
+    # we might need to rely on what's passed.
+    # The get_historical_ohlc function DOES NOT return volume by default in this app's implementation
+    # (see _fetch_historical_ohlc_cached).
+    # If volume is missing, we can't calculate VWAP.
+    if 'volume' not in df:
+         return pd.Series(dtype=float)
+
+    vp = tp * df['volume']
+
+    # Rolling 20-day VWAP
+    cum_vp = vp.rolling(20).sum()
+    cum_vol = df['volume'].rolling(20).sum()
+
+    vwap = cum_vp / cum_vol
+    return vwap
+
+def calculate_parabolic_sar(df, af=0.02, max_af=0.2):
+    """
+    Calculate Parabolic SAR.
+    """
+    if df.empty or 'high' not in df or 'low' not in df:
+        return pd.Series(dtype=float)
+
+    high = df['high'].values
+    low = df['low'].values
+    close = df['close'].values
+
+    psar = close.copy()
+    psar_series = pd.Series(index=df.index, dtype=float)
+
+    bull = True
+    af_val = af
+    ep = high[0] # Extreme Point
+
+    psar[0] = low[0] # Starting value
+
+    for i in range(1, len(df)):
+        prev_psar = psar[i-1]
+
+        # Calculate current SAR
+        curr_psar = prev_psar + af_val * (ep - prev_psar)
+
+        # Check for reversal
+        if bull:
+            if low[i] < curr_psar:
+                bull = False
+                curr_psar = ep
+                ep = low[i]
+                af_val = af
+            else:
+                if high[i] > ep:
+                    ep = high[i]
+                    af_val = min(af_val + af, max_af)
+                # Cap SAR at lowest of previous 2 lows
+                # (Standard Wilder adjustment)
+                if i > 1:
+                    curr_psar = min(curr_psar, low[i-1], low[i-2])
+
+        else: # Bear
+            if high[i] > curr_psar:
+                bull = True
+                curr_psar = ep
+                ep = high[i]
+                af_val = af
+            else:
+                if low[i] < ep:
+                    ep = low[i]
+                    af_val = min(af_val + af, max_af)
+                # Cap SAR at highest of previous 2 highs
+                if i > 1:
+                    curr_psar = max(curr_psar, high[i-1], high[i-2])
+
+        psar[i] = curr_psar
+        psar_series.iloc[i] = curr_psar
+
+    return psar_series
+
 def calculate_roi(initial_investment, initial_price, current_price):
     """
     Calculate Return on Investment.
