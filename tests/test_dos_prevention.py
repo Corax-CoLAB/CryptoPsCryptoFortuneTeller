@@ -22,7 +22,14 @@ def test_get_historical_prices_dos_prevention():
     """
     # Mock streamlit using patch.dict on sys.modules
     mock_st = MagicMock()
-    mock_st.cache_data = lambda **kwargs: lambda func: func
+
+    # Handle both @st.cache_data and @st.cache_data(ttl=...) usage
+    def mock_cache_data(func=None, **kwargs):
+        if func:
+            return func
+        return lambda f: f
+
+    mock_st.cache_data = mock_cache_data
 
     with patch.dict(sys.modules, {'streamlit': mock_st}):
         helper = get_helper_module()
@@ -60,7 +67,13 @@ def test_get_historical_ohlc_dos_prevention():
     Verify that get_historical_ohlc handles large 'days' values gracefully.
     """
     mock_st = MagicMock()
-    mock_st.cache_data = lambda **kwargs: lambda func: func
+
+    def mock_cache_data(func=None, **kwargs):
+        if func:
+            return func
+        return lambda f: f
+
+    mock_st.cache_data = mock_cache_data
 
     with patch.dict(sys.modules, {'streamlit': mock_st}):
         helper = get_helper_module()
@@ -86,7 +99,14 @@ def test_max_history_days_constant():
     # Use standard import for constant check (no need to mock streamlit if just checking constant)
     # But to be safe, we can use the helper
     mock_st = MagicMock()
-    mock_st.cache_data = lambda **kwargs: lambda func: func
+
+    def mock_cache_data(func=None, **kwargs):
+        if func:
+            return func
+        return lambda f: f
+
+    mock_st.cache_data = mock_cache_data
+
     with patch.dict(sys.modules, {'streamlit': mock_st}):
         helper = get_helper_module()
         assert helper.MAX_HISTORY_DAYS < 106752

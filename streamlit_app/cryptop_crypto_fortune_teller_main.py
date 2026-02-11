@@ -34,7 +34,12 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     get_coin_market_data,
     check_risk_level,
     generate_trading_signal,
-    validate_coin_id
+    validate_coin_id,
+    detect_candlestick_patterns,
+    get_exchange_arbitrage,
+    calculate_correlation_matrix,
+    calculate_dca_strategy,
+    detect_volume_anomalies
 )
 from modules.cryptop_crypto_fortune_teller_models import (
     forecast_general_ensemble
@@ -371,6 +376,14 @@ with tab2:
                 cols[5].metric("R2", f"{pivot_points['R2']:.2f}")
                 cols[6].metric("R3", f"{pivot_points['R3']:.2f}")
 
+            # Feature: Candlestick Pattern Recognition
+            with st.expander("🕯️ AI Pattern Recognition", expanded=True):
+                patterns = detect_candlestick_patterns(ohlc_df)
+                if patterns:
+                    st.success(f"Detected Patterns on Latest Candle: {', '.join(patterns)}")
+                else:
+                    st.info("No specific patterns detected on the latest candle.")
+
             # Sub-charts: RSI, Stoch, MACD
             st.markdown("### Indicators")
 
@@ -444,6 +457,22 @@ with tab3:
                     hovermode="x unified"
                 )
                 st.plotly_chart(fig_comp, use_container_width=True)
+
+                # Feature: Correlation Matrix
+                st.markdown("### 🔗 Correlation Matrix")
+                with st.spinner("Calculating correlations..."):
+                    corr_matrix = calculate_correlation_matrix(comp_ids, days=comp_days)
+                    if not corr_matrix.empty:
+                        fig_corr = px.imshow(
+                            corr_matrix,
+                            text_auto=True,
+                            aspect="auto",
+                            color_continuous_scale='RdBu_r',
+                            title=f"Correlation Heatmap ({comp_days} days)"
+                        )
+                        fig_corr.update_layout(template="plotly_dark")
+                        st.plotly_chart(fig_corr, use_container_width=True)
+
             else:
                 st.error("No data available for selected coins.")
     else:
@@ -591,11 +620,30 @@ with tab6:
         else:
             st.error("Could not load market data.")
 
+    st.markdown("---")
+    st.write("### 🌐 Global Arbitrage Scanner")
+    arb_symbol = st.text_input("Enter Symbol for Arbitrage Check (e.g., BTC/USDT)", "BTC/USDT")
+    if st.button("Scan Exchanges"):
+        with st.spinner(f"Scanning exchanges for {arb_symbol}..."):
+            arb_df = get_exchange_arbitrage(arb_symbol)
+            if not arb_df.empty:
+                st.dataframe(arb_df.style.format({'Price': "${:,.2f}", 'Spread %': "{:.2f}%"}))
+
+                best_price = arb_df['Price'].max()
+                best_ex = arb_df.loc[arb_df['Price'].idxmax()]['Exchange']
+                worst_price = arb_df['Price'].min()
+                worst_ex = arb_df.loc[arb_df['Price'].idxmin()]['Exchange']
+
+                profit_pct = ((best_price - worst_price) / worst_price) * 100
+                st.success(f"💎 Arbitrage Opportunity: Buy on **{worst_ex}** (${worst_price:,.2f}), Sell on **{best_ex}** (${best_price:,.2f}). Potential Profit: **{profit_pct:.2f}%**")
+            else:
+                st.warning("Could not fetch arbitrage data. Check symbol or API limits.")
+
 # --- TAB 7: CALCULATORS ---
 with tab7:
     st.subheader("🧮 Crypto Calculators")
 
-    c_tab1, c_tab2, c_tab3 = st.tabs(["If I Invested...", "Moon Math", "Risk/Reward"])
+    c_tab1, c_tab2, c_tab3, c_tab4 = st.tabs(["If I Invested...", "Moon Math", "Risk/Reward", "DCA Time Machine"])
 
     with c_tab1:
         st.write("#### 💸 If I Invested...")
@@ -674,6 +722,41 @@ with tab7:
             elif rr < 1:
                 st.warning("Poor R:R Ratio.")
 
+    with c_tab4:
+        st.write("#### ⏳ Dollar Cost Averaging (DCA) Time Machine")
+        st.write("Simulate a recurring investment strategy vs. Lump Sum.")
+
+        col_dca1, col_dca2, col_dca3 = st.columns(3)
+        dca_amount = col_dca1.number_input("Recurring Amount ($)", 10, 10000, 100)
+        dca_freq = col_dca2.number_input("Frequency (Days)", 1, 30, 7)
+        dca_duration = col_dca3.number_input("Duration (Days)", 30, 1825, 365)
+
+        if st.button("Run DCA Simulation"):
+            with st.spinner("Travelling through time..."):
+                dca_res = calculate_dca_strategy(coin_id, dca_amount, dca_freq, dca_duration)
+                if dca_res:
+                    st.metric("Total Invested", f"${dca_res['total_invested']:,.2f}")
+
+                    c_dca_a, c_dca_b = st.columns(2)
+                    dca_val = dca_res['dca_value']
+                    lump_val = dca_res['lump_value']
+
+                    dca_gain = ((dca_val - dca_res['total_invested']) / dca_res['total_invested']) * 100
+                    lump_gain = ((lump_val - dca_res['total_invested']) / dca_res['total_invested']) * 100
+
+                    c_dca_a.metric("DCA Final Value", f"${dca_val:,.2f}", delta=f"{dca_gain:.2f}%")
+                    c_dca_b.metric("Lump Sum Value", f"${lump_val:,.2f}", delta=f"{lump_gain:.2f}%")
+
+                    # Plot
+                    hist_df = dca_res['history_df']
+                    fig_dca = go.Figure()
+                    fig_dca.add_trace(go.Scatter(x=hist_df.index, y=hist_df['value'], name='DCA Value', fill='tozeroy'))
+                    fig_dca.add_trace(go.Scatter(x=hist_df.index, y=hist_df['invested'], name='Invested', line=dict(dash='dot')))
+                    fig_dca.update_layout(title="DCA Portfolio Growth", template="plotly_dark")
+                    st.plotly_chart(fig_dca, use_container_width=True)
+                else:
+                    st.error("Simulation failed. Check data availability.")
+
 # --- TAB 8: STATS ---
 with tab8:
     st.subheader("📊 Advanced Statistics")
@@ -687,6 +770,23 @@ with tab8:
         fig_vol.add_trace(go.Scatter(x=vol_metrics.index, y=vol_metrics['ATR'], name='ATR', line=dict(color='#00FFFF', dash='dot')), secondary_y=True)
         fig_vol.update_layout(title="Volatility (180d)", template="plotly_dark", height=400)
         st.plotly_chart(fig_vol, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("🐋 Whale Sonar (Volume Anomalies)")
+    st.write("Detects days with unusual volume spikes (> 2x average).")
+
+    anomalies = detect_volume_anomalies(coin_id, days=180)
+    if not anomalies.empty:
+        st.warning(f"Detected {len(anomalies)} volume anomalies in the last 180 days.")
+        st.dataframe(anomalies.style.format({'volume': "{:,.0f}", 'vol_ma': "{:,.0f}"}))
+
+        # Plot volume with markers
+        fig_whale = go.Figure()
+        fig_whale.add_trace(go.Bar(x=anomalies.index, y=anomalies['volume'], name='Whale Spike', marker_color='red'))
+        fig_whale.update_layout(title="Volume Spikes", template="plotly_dark", height=300)
+        st.plotly_chart(fig_whale, use_container_width=True)
+    else:
+        st.success("No significant volume anomalies detected recently.")
 
     st.markdown("---")
     metrics = get_coin_metrics(coin_id)
@@ -905,6 +1005,11 @@ with tab10:
     7.  **Multi-Asset Comparison:** Compare performance of up to 5 coins side-by-side.
     8.  **Advanced Indicators:** Ichimoku Cloud, Stochastic, Pivot Points, SMA Ribbons.
     9.  **Calculators:** ROI, Moon Math, and Risk/Reward tools.
+    10. **AI Pattern Recognition:** Detect candlestick patterns (Hammer, Engulfing, etc.).
+    11. **Arbitrage Scanner:** Scan global exchanges for price differences.
+    12. **Correlation Matrix:** Visualize asset correlations for diversification.
+    13. **DCA Time Machine:** Backtest Dollar Cost Averaging strategies.
+    14. **Whale Sonar:** Detect unusual volume spikes.
 
     ---
     *Disclaimer: This tool is for entertainment and educational purposes only. The future is always in flux.*

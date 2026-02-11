@@ -6,6 +6,7 @@ import streamlit as st
 import requests
 import concurrent.futures
 import re
+import ccxt
 
 # Initialize CoinGecko client (public demo API)
 cg = CoinGeckoAPI()
@@ -172,7 +173,9 @@ def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
         fetch_days = 30
     # Tier 3: Max (>30 days) (4 day resolution)
     else:
-        fetch_days = 'max'
+        # Sentinel: Public API limits OHLC to 365 days.
+        # Use '365' instead of 'max' to prevent 400 Bad Request.
+        fetch_days = 365
 
     # Fetch from cached tier
     df = _fetch_historical_ohlc_cached(coin_id, vs_currency, days=fetch_days)
@@ -180,7 +183,7 @@ def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
     if df.empty:
         return df
 
-    # Return full df if 'max' requested or if we are using exact bucket
+    # Return full df if 'max' requested (implicitly capped at 365 now)
     if days == 'max':
         return df
 
@@ -728,3 +731,211 @@ def get_coin_market_cap_batch(limit=50):
     except Exception as e:
         st.error(f"Error fetching market cap batch: {e}")
         return pd.DataFrame()
+
+
+# --- NEW FEATURES ---
+
+def detect_candlestick_patterns(df):
+    """
+    Feature 1: AI Pattern Recognition
+    Detects Hammer, Doji, Bullish Engulfing, Bearish Engulfing patterns on the latest candles.
+    """
+    if df.empty or len(df) < 2:
+        return []
+
+    patterns = []
+
+    # Get last two candles
+    curr = df.iloc[-1]
+    prev = df.iloc[-2]
+
+    # Helper for body size
+    def get_body(row):
+        return abs(row['close'] - row['open'])
+
+    def is_green(row):
+        return row['close'] > row['open']
+
+    curr_body = get_body(curr)
+    curr_range = curr['high'] - curr['low']
+    # prev_body = get_body(prev) # Unused
+    # prev_range = prev['high'] - prev['low'] # Unused
+
+    # 1. Doji: Body is very small relative to range
+    if curr_range > 0 and (curr_body / curr_range) < 0.1:
+        patterns.append("Doji (Indecision)")
+
+    # 2. Hammer: Small body, long lower wick, short upper wick
+    # Lower wick > 2 * body
+    lower_wick = min(curr['close'], curr['open']) - curr['low']
+    upper_wick = curr['high'] - max(curr['close'], curr['open'])
+
+    if curr_body > 0 and lower_wick > (2 * curr_body) and upper_wick < (0.5 * curr_body):
+         patterns.append("Hammer (Potential Reversal)")
+
+    # 3. Bullish Engulfing: Prev red, Curr green, Curr body engulfs Prev body
+    if not is_green(prev) and is_green(curr):
+        if curr['close'] > prev['open'] and curr['open'] < prev['close']:
+            patterns.append("Bullish Engulfing")
+
+    # 4. Bearish Engulfing: Prev green, Curr red, Curr body engulfs Prev body
+    if is_green(prev) and not is_green(curr):
+        if curr['open'] > prev['close'] and curr['close'] < prev['open']:
+            patterns.append("Bearish Engulfing")
+
+    return patterns
+
+@st.cache_data(ttl=60)
+def get_exchange_arbitrage(symbol_str):
+    """
+    Feature 2: Arbitrage Scanner
+    Fetches prices for a symbol (e.g., 'BTC/USDT') across major exchanges.
+    Returns DataFrame with Exchange, Price, and Spread.
+    """
+    exchanges = ['binance', 'kraken', 'coinbase', 'kucoin', 'okx', 'gate', 'bybit']
+    data = []
+
+    # Normalize symbol
+    symbol = symbol_str.upper()
+    if '/' not in symbol:
+        symbol += '/USDT' # Default to USDT pair if not specified
+
+    def fetch_ticker(ex_name):
+        try:
+            exchange_class = getattr(ccxt, ex_name)
+            exchange = exchange_class()
+            ticker = exchange.fetch_ticker(symbol)
+            return {'Exchange': ex_name.capitalize(), 'Price': ticker['last']}
+        except Exception:
+            return None
+
+    # Use ThreadPoolExecutor for speed
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        results = executor.map(fetch_ticker, exchanges)
+        for res in results:
+            if res:
+                data.append(res)
+
+    if not data:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(data)
+    if not df.empty:
+        min_price = df['Price'].min()
+        df['Spread %'] = ((df['Price'] - min_price) / min_price) * 100
+        df = df.sort_values(by='Price', ascending=False)
+
+    return df
+
+@st.cache_data(ttl=3600)
+def calculate_correlation_matrix(coin_ids, days=90):
+    """
+    Feature 3: Correlation Matrix
+    Computes the Pearson correlation matrix for the selected coins.
+    """
+    df = get_batch_historical_prices(coin_ids, days=days)
+    if df.empty:
+        return pd.DataFrame()
+
+    # Calculate percentage change (returns)
+    returns_df = df.pct_change()
+    corr_matrix = returns_df.corr()
+    return corr_matrix
+
+def calculate_dca_strategy(coin_id, amount, freq_days, duration_days):
+    """
+    Feature 4: DCA Simulator
+    Simulates Dollar Cost Averaging vs Lump Sum.
+    """
+    # Fetch history
+    df = get_historical_prices(coin_id, days=duration_days)
+    if df.empty:
+        return None
+
+    df = df.sort_index()
+
+    # Resample to frequency
+    start_date = df.index[0]
+    end_date = df.index[-1]
+
+    dca_dates = pd.date_range(start=start_date, end=end_date, freq=f'{freq_days}D')
+
+    # Filter df to nearest dates
+    dca_df = df.reindex(dca_dates, method='nearest')
+
+    total_invested = 0
+    total_coins = 0
+
+    # Simulate Buys
+    history = []
+    for date, row in dca_df.iterrows():
+        # Handle cases where reindex created NaNs (if dates out of range)
+        if pd.isna(row['close']):
+            continue
+
+        price = row['close']
+        if price <= 0: continue
+
+        coins_bought = amount / price
+        total_invested += amount
+        total_coins += coins_bought
+        current_value = total_coins * price
+
+        history.append({
+            'date': date,
+            'invested': total_invested,
+            'value': current_value,
+            'price': price
+        })
+
+    res_df = pd.DataFrame(history).set_index('date')
+
+    if res_df.empty:
+        return None
+
+    current_price = df.iloc[-1]['close']
+    dca_final_value = total_coins * current_price
+
+    # Lump Sum Comparison (invest total_invested at start)
+    lump_coins = total_invested / df.iloc[0]['close']
+    lump_final_value = lump_coins * current_price
+
+    return {
+        'dca_value': dca_final_value,
+        'lump_value': lump_final_value,
+        'total_invested': total_invested,
+        'history_df': res_df
+    }
+
+@st.cache_data(ttl=3600)
+def get_historical_volume(coin_id, days=30):
+    """
+    Fetch historical volume data.
+    """
+    if not validate_coin_id(coin_id):
+        return pd.DataFrame()
+
+    try:
+        data = cg.get_coin_market_chart_by_id(id=coin_id, vs_currency='usd', days=days)
+        volumes = data.get('total_volumes', [])
+        df = pd.DataFrame(volumes, columns=['timestamp', 'volume'])
+        df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+        df.set_index('date', inplace=True)
+        return df[['volume']]
+    except Exception:
+        return pd.DataFrame()
+
+def detect_volume_anomalies(coin_id, days=30):
+    """
+    Feature 5: Whale Sonar
+    Detects volume spikes > 2.0 * 20-day moving average.
+    """
+    df = get_historical_volume(coin_id, days=days)
+    if df.empty:
+        return pd.DataFrame()
+
+    df['vol_ma'] = df['volume'].rolling(20).mean()
+    df['anomaly'] = df['volume'] > (2.0 * df['vol_ma'])
+
+    # Return rows with anomalies
+    return df[df['anomaly']]
