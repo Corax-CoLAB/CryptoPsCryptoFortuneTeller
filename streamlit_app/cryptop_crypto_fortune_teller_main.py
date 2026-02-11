@@ -39,7 +39,10 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     get_exchange_arbitrage,
     calculate_correlation_matrix,
     calculate_dca_strategy,
-    detect_volume_anomalies
+    detect_volume_anomalies,
+    calculate_vwap,
+    calculate_parabolic_sar,
+    get_historical_volume
 )
 from modules.cryptop_crypto_fortune_teller_models import (
     forecast_general_ensemble
@@ -122,6 +125,18 @@ with st.sidebar:
             help="Analyze community data (Twitter/Reddit sentiment) to adjust the forecast."
         )
 
+        with st.expander("🔧 Advanced Model Config"):
+            st.write("Tune the Prophet model hyperparameters.")
+            p_changepoint = st.slider("Changepoint Prior Scale", 0.001, 0.5, 0.05, step=0.001, help="Flexibility of the trend. Higher = more flexible (overfitting risk).")
+            p_seasonality = st.slider("Seasonality Prior Scale", 0.01, 20.0, 10.0, step=0.1, help="Strength of seasonality.")
+            p_season_mode = st.radio("Seasonality Mode", ["additive", "multiplicative"], index=0)
+
+            model_params = {
+                'changepoint_prior_scale': p_changepoint,
+                'seasonality_prior_scale': p_seasonality,
+                'seasonality_mode': p_season_mode
+            }
+
     st.markdown("---")
 
     # Fear & Greed
@@ -203,7 +218,8 @@ with tab1:
                     price_df,
                     model_names=selected_models,
                     periods=forecast_days,
-                    sentiment_score=s_score
+                    sentiment_score=s_score,
+                    model_params=model_params
                 )
 
             if not forecast_df.empty:
@@ -297,11 +313,13 @@ with tab2:
         st.write("Indicators & Overlays:")
         col_ind1, col_ind2, col_ind3 = st.columns(3)
         show_fib = col_ind1.checkbox("Fibonacci Levels")
-        show_sma = col_ind2.checkbox("SMA Ribbon (20/50/100/200)")
+        show_sma = col_ind2.checkbox("SMA Ribbon")
         show_ichi = col_ind3.checkbox("Ichimoku Cloud")
         show_stoch = col_ind1.checkbox("Stochastic Osc.")
         show_bb = col_ind2.checkbox("Bollinger Bands", value=True)
         show_pivot = col_ind3.checkbox("Pivot Points")
+        show_vwap = col_ind1.checkbox("VWAP")
+        show_sar = col_ind2.checkbox("Parabolic SAR")
 
     with st.spinner("Analyzing market patterns..."):
         # Fetch OHLC
@@ -323,12 +341,31 @@ with tab2:
             stoch_df = calculate_stochastic_oscillator(ohlc_df) if show_stoch else pd.DataFrame()
             pivot_points = calculate_pivot_points(ohlc_df) if show_pivot else {}
 
+            # VWAP & SAR Logic
+            vwap_series = pd.Series(dtype=float)
+            if show_vwap:
+                vol_df = get_historical_volume(coin_id, days=days_back)
+                if not vol_df.empty:
+                    # Join volume to OHLC for calculation
+                    temp_df = ohlc_df.join(vol_df, how='left')
+                    vwap_series = calculate_vwap(temp_df)
+
+            sar_series = calculate_parabolic_sar(ohlc_df) if show_sar else pd.Series(dtype=float)
+
             # Plot 1: Main Chart
             fig_main = go.Figure()
             fig_main.add_trace(go.Candlestick(
                 x=ohlc_df.index, open=ohlc_df['open'], high=ohlc_df['high'],
                 low=ohlc_df['low'], close=ohlc_df['close'], name='OHLC'
             ))
+
+            # VWAP
+            if show_vwap and not vwap_series.empty:
+                fig_main.add_trace(go.Scatter(x=vwap_series.index, y=vwap_series, line=dict(color='#ff9f43', width=2), name='VWAP'))
+
+            # Parabolic SAR
+            if show_sar and not sar_series.empty:
+                fig_main.add_trace(go.Scatter(x=sar_series.index, y=sar_series, mode='markers', marker=dict(color='white', size=4, symbol='cross'), name='Parabolic SAR'))
 
             # Bollinger Bands
             if not bb_df.empty:
@@ -591,6 +628,61 @@ with tab5:
                 if st.button("Cancel"):
                     st.session_state.confirm_clear_portfolio = False
                     st.experimental_rerun()
+
+        # Future Wealth Projection
+        st.markdown("---")
+        st.subheader("🔮 Future Wealth Projection")
+        st.write("Estimate the future value of your assets based on AI forecasts (30-day horizon).")
+
+        port_options = list(set([item['name'] for item in st.session_state.portfolio]))
+        if port_options:
+            selected_port_asset = st.selectbox("Select Asset to Project", port_options, key="port_forecast_select")
+
+            # Find asset details (sum amount if multiple entries)
+            # Simple approach: sum amount for this coin
+            total_amt = sum([i['amount'] for i in st.session_state.portfolio if i['name'] == selected_port_asset])
+            asset_id = next((i['id'] for i in st.session_state.portfolio if i['name'] == selected_port_asset), None)
+
+            if asset_id and total_amt > 0:
+                with st.spinner(f"Projecting value for {selected_port_asset}..."):
+                     # Fetch history
+                     p_hist = get_historical_prices(asset_id, days=365)
+                     if not p_hist.empty:
+                         # Forecast 30 days using Standard Prophet
+                         p_forecast = forecast_general_ensemble(p_hist, ["Prophet (Standard)"], periods=30)
+
+                         if not p_forecast.empty:
+                             current_price = p_hist['close'].iloc[-1]
+                             current_val = total_amt * current_price
+                             future_price = p_forecast['yhat'].iloc[-1]
+                             future_val = total_amt * future_price
+
+                             gain_pct = ((future_val - current_val) / current_val) * 100 if current_val > 0 else 0
+
+                             c_fw1, c_fw2 = st.columns(2)
+                             c_fw1.metric("Current Value", f"${current_val:,.2f}")
+                             c_fw2.metric("Projected Value (30 Days)", f"${future_val:,.2f}", delta=f"{gain_pct:.2f}%")
+
+                             # Plot
+                             fig_fw = go.Figure()
+                             # History (Last 30 days)
+                             disp_hist = p_hist.iloc[-30:]
+                             fig_fw.add_trace(go.Scatter(x=disp_hist.index, y=disp_hist['close'] * total_amt, name='History', line=dict(color='cyan')))
+                             # Forecast
+                             fig_fw.add_trace(go.Scatter(x=p_forecast['ds'], y=p_forecast['yhat'] * total_amt, name='Forecast', line=dict(color='magenta', dash='dash')))
+
+                             # Confidence
+                             if 'yhat_upper' in p_forecast.columns:
+                                 fig_fw.add_trace(go.Scatter(x=p_forecast['ds'], y=p_forecast['yhat_upper'] * total_amt, showlegend=False, line=dict(width=0)))
+                                 fig_fw.add_trace(go.Scatter(x=p_forecast['ds'], y=p_forecast['yhat_lower'] * total_amt, fill='tonexty', showlegend=False, line=dict(width=0), fillcolor='rgba(255,0,255,0.1)'))
+
+                             fig_fw.update_layout(title=f"Projected Value: {selected_port_asset}", template="plotly_dark", height=350, hovermode="x unified")
+                             st.plotly_chart(fig_fw, use_container_width=True)
+                         else:
+                             st.warning("Forecast model returned no data.")
+                     else:
+                         st.warning("Insufficient historical data for projection.")
+
     else:
         st.info("Portfolio empty.")
 
