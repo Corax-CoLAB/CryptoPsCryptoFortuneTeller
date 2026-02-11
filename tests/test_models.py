@@ -8,8 +8,46 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../stre
 
 from modules.cryptop_crypto_fortune_teller_models import (
     forecast_prophet,
-    forecast_lstm
+    forecast_lstm,
+    _run_prophet_model,
+    MAX_FORECAST_HORIZON
 )
+from unittest.mock import patch
+
+def test_prophet_slicing_logic():
+    # We want to verify that _run_prophet_model returns the correct number of rows
+    # and that it correctly slices the cached result.
+
+    history_len = 10
+    total_len = history_len + MAX_FORECAST_HORIZON
+
+    df_dummy = pd.DataFrame({
+        'ds': pd.date_range(start='2020-01-01', periods=total_len),
+        'yhat': np.arange(total_len),
+        'yhat_lower': np.arange(total_len),
+        'yhat_upper': np.arange(total_len)
+    })
+
+    # We mock the FIXED function, not the wrapper
+    with patch('modules.cryptop_crypto_fortune_teller_models._run_prophet_model_fixed') as mock_fixed:
+        mock_fixed.return_value = df_dummy
+
+        # Case 1: periods = 30
+        res = _run_prophet_model(pd.DataFrame(), {}, periods=30)
+        assert len(res) == history_len + 30
+        assert res.iloc[-1]['yhat'] == history_len + 30 - 1
+
+        # Case 2: periods = MAX_FORECAST_HORIZON (365)
+        res_full = _run_prophet_model(pd.DataFrame(), {}, periods=MAX_FORECAST_HORIZON)
+        assert len(res_full) == total_len
+
+        # Case 3: periods = 1
+        res_1 = _run_prophet_model(pd.DataFrame(), {}, periods=1)
+        assert len(res_1) == history_len + 1
+
+        # Case 4: periods > MAX (clamped)
+        res_clamp = _run_prophet_model(pd.DataFrame(), {}, periods=MAX_FORECAST_HORIZON + 10)
+        assert len(res_clamp) == total_len
 
 def test_forecast_prophet():
     # Create dummy data

@@ -45,14 +45,12 @@ def get_prophet_config(model_name):
         }
 
 @st.cache_data(ttl=3600)
-def _run_prophet_model(df, config, periods=30):
+def _run_prophet_model_fixed(df, config):
     """
-    Internal function to run a single Prophet model with specific config.
+    Internal function to run a single Prophet model with fixed MAX_FORECAST_HORIZON.
+    This avoids re-running the model when only the forecast horizon changes.
     """
-    # 🛡️ Sentinel: Enforce Input Limits
-    if periods > MAX_FORECAST_HORIZON:
-        logging.warning(f"Prophet: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
-        periods = MAX_FORECAST_HORIZON
+    periods = MAX_FORECAST_HORIZON
 
     if len(df) > MAX_HISTORY_LENGTH:
         df = df.iloc[-MAX_HISTORY_LENGTH:]
@@ -90,6 +88,29 @@ def _run_prophet_model(df, config, periods=30):
     except Exception as e:
         st.error(f"Prophet model failed: {e}")
         return pd.DataFrame(columns=['ds','yhat','yhat_lower','yhat_upper'])
+
+
+def _run_prophet_model(df, config, periods=30):
+    """
+    Wrapper around _run_prophet_model_fixed to slice the result.
+    """
+    # 🛡️ Sentinel: Enforce Input Limits
+    if periods > MAX_FORECAST_HORIZON:
+        logging.warning(f"Prophet: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
+        periods = MAX_FORECAST_HORIZON
+
+    full_forecast = _run_prophet_model_fixed(df, config)
+
+    if full_forecast.empty:
+        return full_forecast
+
+    # Slice the result
+    # The full_forecast has H + MAX_FORECAST_HORIZON rows.
+    # We want H + periods rows.
+    cutoff = MAX_FORECAST_HORIZON - periods
+    if cutoff > 0:
+        return full_forecast.iloc[:-cutoff]
+    return full_forecast
 
 @st.cache_data(ttl=3600)
 def forecast_arima(df, periods=30):
