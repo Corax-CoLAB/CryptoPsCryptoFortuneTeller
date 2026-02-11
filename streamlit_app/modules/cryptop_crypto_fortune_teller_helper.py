@@ -195,6 +195,7 @@ def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
     except (pd.errors.OutOfBoundsTimedelta, OverflowError, ValueError):
         return df
 
+@st.cache_data
 def compute_volatility(df, window=14):
     """
     Compute volatility indicators: rolling standard deviation and Average True Range (ATR).
@@ -246,16 +247,12 @@ def check_risk_level(df):
     if df.empty or len(df) < 15:
         return None
 
-    # Calculate volatility (rolling standard deviation)
-    # Optimized: Compute directly on series to avoid overhead of full DataFrame creation in compute_volatility
-    if 'close' not in df:
+    # Calculate volatility
+    vol_data = compute_volatility(df, window=14)
+    if vol_data.empty:
         return None
 
-    rolling_std = df['close'].rolling(14).std()
-
-    if rolling_std.empty:
-        return None
-
+    rolling_std = vol_data['rolling_std']
     current_vol = rolling_std.iloc[-1]
     avg_vol = rolling_std.mean()
 
