@@ -720,6 +720,7 @@ def calculate_moon_math(current_price, current_supply, target_market_cap):
 def get_coin_market_cap_batch(limit=50):
     """
     Fetch market data for top N coins to visualize market cap.
+    Used for the Market Overview visualization.
     """
     try:
         # vs_currency='usd' is default
