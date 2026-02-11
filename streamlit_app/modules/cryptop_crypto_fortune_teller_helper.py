@@ -356,7 +356,10 @@ def get_fear_and_greed_index():
     """
     url = "https://api.alternative.me/fng/"
     try:
-        r = requests.get(url, timeout=10)
+        # Sentinel: Added User-Agent, extended timeout, and status check
+        headers = {'User-Agent': 'CryptoFortuneTeller/1.0'}
+        r = requests.get(url, headers=headers, timeout=20)
+        r.raise_for_status()
         data = r.json()
         if data.get('data'):
             item = data['data'][0]
