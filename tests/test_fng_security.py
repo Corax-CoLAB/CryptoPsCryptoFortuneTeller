@@ -6,7 +6,7 @@ import os
 # Mock streamlit before importing the module to bypass caching
 sys.modules['streamlit'] = MagicMock()
 # Ensure cache_data acts as a pass-through decorator
-sys.modules['streamlit'].cache_data = lambda **kwargs: lambda func: func
+sys.modules['streamlit'].cache_data = lambda func=None, **kwargs: (lambda f: f) if func is None else func
 
 import requests
 
