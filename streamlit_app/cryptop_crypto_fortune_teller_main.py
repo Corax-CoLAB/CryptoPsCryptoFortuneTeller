@@ -44,6 +44,7 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     calculate_parabolic_sar,
     get_historical_volume
 )
+from modules.utils import validate_url
 from modules.cryptop_crypto_fortune_teller_models import (
     forecast_general_ensemble
 )
@@ -1020,15 +1021,18 @@ with tab9:
                 submitted_ft = st.form_submit_button("Connect Bot")
 
                 if submitted_ft:
-                    client = FreqtradeManager(ft_url, ft_user, ft_pass)
-                    # Try login
-                    success, msg = client.login()
-                    if success:
-                        st.session_state.ft_client = client
-                        st.session_state.ft_connected = True
-                        st.success(msg)
+                    if not validate_url(ft_url):
+                        st.error("Invalid API URL. Please enter a valid HTTP/HTTPS URL.")
                     else:
-                        st.error(msg)
+                        client = FreqtradeManager(ft_url, ft_user, ft_pass)
+                        # Try login
+                        success, msg = client.login()
+                        if success:
+                            st.session_state.ft_client = client
+                            st.session_state.ft_connected = True
+                            st.success(msg)
+                        else:
+                            st.error(msg)
 
         if st.session_state.ft_connected:
             st.success("Freqtrade Connected 🤖")
