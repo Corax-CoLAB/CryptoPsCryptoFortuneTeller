@@ -385,6 +385,7 @@ def get_fear_and_greed_index():
         st.error(f"Error fetching Fear & Greed Index: {e}")
         return None
 
+@st.cache_data
 def calculate_rsi(df, period=14):
     """Calculate RSI for a given DataFrame with a 'close' column."""
     if 'close' not in df:
@@ -402,6 +403,7 @@ def calculate_rsi(df, period=14):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
+@st.cache_data
 def calculate_macd(df, short_window=12, long_window=26, signal_window=9):
     """Calculate MACD, Signal, and Histogram."""
     if 'close' not in df:
@@ -414,6 +416,7 @@ def calculate_macd(df, short_window=12, long_window=26, signal_window=9):
     hist = macd - signal
     return pd.DataFrame({'MACD': macd, 'Signal': signal, 'Histogram': hist})
 
+@st.cache_data
 def calculate_bollinger_bands(df, window=20, num_std=2):
     """Calculate Bollinger Bands."""
     if 'close' not in df:
@@ -451,6 +454,7 @@ def get_current_price(coin_ids, vs_currencies='usd,eur,btc,eth'):
         st.error(f"Error fetching prices: {e}")
         return {}
 
+@st.cache_data
 def calculate_backtest(df, strategy_type='SMA Crossover'):
     """
     Perform a simple backtest on the provided DataFrame.
@@ -569,6 +573,7 @@ def get_batch_historical_prices(coin_ids: list, days: int = 90) -> pd.DataFrame:
 
 # --- NEW FEATURES ---
 
+@st.cache_data
 def calculate_stochastic_oscillator(df, k_window=14, d_window=3):
     """
     Calculate Stochastic Oscillator (K and D).
@@ -585,6 +590,7 @@ def calculate_stochastic_oscillator(df, k_window=14, d_window=3):
 
     return pd.DataFrame({'%K': k, '%D': d}, index=df.index)
 
+@st.cache_data
 def calculate_ichimoku_cloud(df):
     """
     Calculate Ichimoku Cloud components.
@@ -622,6 +628,7 @@ def calculate_ichimoku_cloud(df):
         'Chikou': chikou_span
     }, index=df.index)
 
+@st.cache_data
 def calculate_pivot_points(df):
     """
     Calculate Pivot Points (Standard) based on the previous day's High, Low, Close.
@@ -659,6 +666,7 @@ def calculate_pivot_points(df):
         'R3': r3, 'S3': s3
     }
 
+@st.cache_data
 def calculate_fibonacci_levels(df):
     """
     Calculate Fibonacci Retracement levels based on the visible high and low range.
@@ -681,6 +689,7 @@ def calculate_fibonacci_levels(df):
         '100.0% (Low)': min_price
     }
 
+@st.cache_data
 def calculate_vwap(df):
     """
     Calculate Volume Weighted Average Price (VWAP).
@@ -715,6 +724,7 @@ def calculate_vwap(df):
     vwap = cum_vp / cum_vol
     return vwap
 
+@st.cache_data
 def calculate_parabolic_sar(df, af=0.02, max_af=0.2):
     """
     Calculate Parabolic SAR.
@@ -830,6 +840,7 @@ def get_coin_market_cap_batch(limit=50):
 
 # --- NEW FEATURES ---
 
+@st.cache_data
 def detect_candlestick_patterns(df):
     """
     Feature 1: AI Pattern Recognition
@@ -937,6 +948,7 @@ def calculate_correlation_matrix(coin_ids, days=90):
     corr_matrix = returns_df.corr()
     return corr_matrix
 
+@st.cache_data(ttl=3600)
 def calculate_dca_strategy(coin_id, amount, freq_days, duration_days):
     """
     Feature 4: DCA Simulator
@@ -1020,6 +1032,7 @@ def get_historical_volume(coin_id, days=30):
     except Exception:
         return pd.DataFrame()
 
+@st.cache_data(ttl=3600)
 def detect_volume_anomalies(coin_id, days=30):
     """
     Feature 5: Whale Sonar
