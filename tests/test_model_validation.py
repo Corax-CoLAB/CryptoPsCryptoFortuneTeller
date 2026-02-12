@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+import warnings
 
 # Add app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
@@ -24,7 +25,7 @@ PROPHET_CONFIG = {
 }
 
 def generate_dummy_data(rows=100):
-    dates = pd.date_range(start='2020-01-01', periods=rows)
+    dates = pd.date_range(start='2020-01-01', periods=rows, freq='D')
     df = pd.DataFrame({'close': np.random.rand(rows) * 100}, index=dates)
     df['date'] = df.index
     return df
@@ -45,7 +46,15 @@ def test_arima_validation():
     df = generate_dummy_data(rows=MAX_HISTORY_LENGTH + 1000)
     huge_periods = MAX_FORECAST_HORIZON + 1000
 
-    res = forecast_arima(df, periods=huge_periods)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        # Statsmodels convergence warning
+        from statsmodels.tools.sm_exceptions import ConvergenceWarning, ValueWarning
+        warnings.filterwarnings("ignore", category=ConvergenceWarning)
+        warnings.filterwarnings("ignore", category=ValueWarning)
+
+        res = forecast_arima(df, periods=huge_periods)
 
     assert len(res) == MAX_FORECAST_HORIZON, f"ARIMA output length {len(res)} exceeds max {MAX_FORECAST_HORIZON}"
 

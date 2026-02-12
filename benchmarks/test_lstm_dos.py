@@ -4,6 +4,7 @@ import os
 import time
 import pandas as pd
 import numpy as np
+import warnings
 
 # Add app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
