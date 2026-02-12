@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+import warnings
 
 # Mock streamlit
 sys.modules['streamlit'] = MagicMock()
@@ -20,9 +21,13 @@ class TestNewModels(unittest.TestCase):
     def setUp(self):
         # Create dummy data (100 days of linear trend)
         self.df = pd.DataFrame({
-            'date': pd.date_range(start='2023-01-01', periods=100),
+            'date': pd.date_range(start='2023-01-01', periods=100, freq='D'),
             'close': np.linspace(100, 200, 100)
         }).set_index('date')
+
+        # Explicitly set frequency to avoid statsmodels warning
+        if hasattr(self.df.index, 'freq'):
+             self.df.index.freq = 'D'
 
     def test_forecast_arima_structure(self):
         # Test that ARIMA returns correct structure even if values are mocked/approx
@@ -32,22 +37,38 @@ class TestNewModels(unittest.TestCase):
         # NOTE: Running ARIMA on random small data might be unstable or warn,
         # but linear data should be fine.
 
-        res = forecast_arima(self.df, periods=10)
+        # Suppress warnings that arise from using simple synthetic data with complex models
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
+            warnings.filterwarnings("ignore", category=RuntimeWarning)
+            # Statsmodels convergence warning
+            from statsmodels.tools.sm_exceptions import ConvergenceWarning, ValueWarning
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+            warnings.filterwarnings("ignore", category=ValueWarning)
 
-        self.assertEqual(len(res), 10)
-        self.assertListEqual(list(res.columns), ['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
+            res = forecast_arima(self.df, periods=10)
 
-        # Check that it predicts roughly the trend (next val > 200)
-        self.assertTrue(res['yhat'].iloc[0] > 190) # generous buffer
+            self.assertEqual(len(res), 10)
+            self.assertListEqual(list(res.columns), ['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
+
+            # Check that it predicts roughly the trend (next val > 200)
+            self.assertTrue(res['yhat'].iloc[0] > 190) # generous buffer
 
     def test_forecast_sarima_structure(self):
         # SARIMA test
-        res = forecast_sarima(self.df, periods=10)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
+            warnings.filterwarnings("ignore", category=RuntimeWarning)
+            from statsmodels.tools.sm_exceptions import ConvergenceWarning, ValueWarning
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+            warnings.filterwarnings("ignore", category=ValueWarning)
 
-        self.assertEqual(len(res), 10)
-        self.assertListEqual(list(res.columns), ['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
+            res = forecast_sarima(self.df, periods=10)
 
-        self.assertTrue(res['yhat'].iloc[0] > 190)
+            self.assertEqual(len(res), 10)
+            self.assertListEqual(list(res.columns), ['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
+
+            self.assertTrue(res['yhat'].iloc[0] > 190)
 
     @patch('modules.cryptop_crypto_fortune_teller_models.forecast_arima')
     @patch('modules.cryptop_crypto_fortune_teller_models.forecast_sarima')

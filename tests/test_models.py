@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+import warnings
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
 
@@ -57,7 +58,9 @@ def test_forecast_prophet():
 
     # Check robustness on small data
     # Prophet requires at least 2 rows
-    forecast = forecast_prophet(df, periods=5)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=DeprecationWarning)
+        forecast = forecast_prophet(df, periods=5)
 
     assert 'ds' in forecast.columns
     assert 'yhat' in forecast.columns
@@ -71,7 +74,9 @@ def test_forecast_lstm_short_data():
     df = pd.DataFrame(data, index=dates)
 
     # Should handle it without crashing thanks to my fix (n_steps will be adjusted)
-    forecast = forecast_lstm(df, periods=2, n_steps=60)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=DeprecationWarning)
+        forecast = forecast_lstm(df, periods=2, n_steps=60)
 
     assert not forecast.empty
     assert len(forecast) == 2
