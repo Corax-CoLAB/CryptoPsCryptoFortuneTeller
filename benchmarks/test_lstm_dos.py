@@ -4,6 +4,7 @@ import os
 import time
 import pandas as pd
 import numpy as np
+import warnings
 
 # Add app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
@@ -20,7 +21,9 @@ def test_lstm_history_dos():
     print(f"Running LSTM forecast with 5000 history points (30 periods)...")
     start_time = time.time()
 
-    forecast_lstm(df, periods=30)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=DeprecationWarning)
+        forecast_lstm(df, periods=30)
 
     end_time = time.time()
     print(f"Time taken: {end_time - start_time:.2f} seconds")
