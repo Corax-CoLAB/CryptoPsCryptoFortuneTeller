@@ -42,7 +42,11 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     detect_volume_anomalies,
     calculate_vwap,
     calculate_parabolic_sar,
-    get_historical_volume
+    get_historical_volume,
+    calculate_adx,
+    calculate_cci,
+    get_top_gainers_losers,
+    calculate_impermanent_loss
 )
 from modules.utils import validate_url
 from modules.cryptop_crypto_fortune_teller_models import (
@@ -69,7 +73,7 @@ logo_path = "assets/logo.png"
 col1, col2, col3 = st.columns([1, 6, 1])
 with col2:
     try:
-        st.image(logo_path, width=120)
+        st.image(logo_path, width=150)
     except:
         st.write("🔮") # Fallback if image missing
     st.markdown("<h1 style='text-align: center; color: #FFD700; text-shadow: 0 0 10px #FF00FF;'>🎪 Crypto P's 🔮<br>Crypto Fortune Teller</h1>", unsafe_allow_html=True)
@@ -112,9 +116,10 @@ with st.sidebar:
                 "Prophet (Conservative)",
                 "LSTM",
                 "ARIMA",
-                "SARIMA"
+                "SARIMA",
+                "Random Forest"
             ],
-            default=["Prophet (Standard)"],
+            default=["Prophet (Standard)", "Random Forest"],
             help="Combine multiple statistical and AI models for robust predictions."
         )
 
@@ -231,9 +236,9 @@ with tab1:
                 col_sig1, col_sig2 = st.columns([1, 3])
                 with col_sig1:
                     st.markdown(f"""
-                    <div style="border: 2px solid {html.escape(signal_color)}; padding: 10px; border-radius: 10px; text-align: center;">
+                    <div style="border: 2px solid {html.escape(signal_color)}; padding: 10px; border-radius: 10px; text-align: center; background-color: rgba(0,0,0,0.5);">
                         <h3 style="color: {html.escape(signal_color)}; margin: 0;">{html.escape(signal)}</h3>
-                        <p style="margin: 0; font-size: 0.8rem;">Trading Signal</p>
+                        <p style="margin: 0; font-size: 0.8rem; color: #fff;">Trading Signal</p>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -321,6 +326,8 @@ with tab2:
         show_pivot = col_ind3.checkbox("Pivot Points")
         show_vwap = col_ind1.checkbox("VWAP")
         show_sar = col_ind2.checkbox("Parabolic SAR")
+        show_adx = col_ind3.checkbox("ADX / DMI")
+        show_cci = col_ind1.checkbox("CCI")
 
     with st.spinner("Analyzing market patterns..."):
         # Fetch OHLC
@@ -435,6 +442,30 @@ with tab2:
                 fig_stoch.update_layout(title="Stochastic Oscillator", template="plotly_dark", height=250, yaxis_range=[0, 100])
                 st.plotly_chart(fig_stoch, use_container_width=True)
 
+            # ADX / CCI row
+            if show_adx or show_cci:
+                col_i1, col_i2 = st.columns(2)
+                with col_i1:
+                    if show_adx:
+                        adx_df = calculate_adx(ohlc_df)
+                        fig_adx = go.Figure()
+                        fig_adx.add_trace(go.Scatter(x=adx_df.index, y=adx_df['ADX'], name='ADX', line=dict(color='white', width=2)))
+                        fig_adx.add_trace(go.Scatter(x=adx_df.index, y=adx_df['+DI'], name='+DI', line=dict(color='green', width=1)))
+                        fig_adx.add_trace(go.Scatter(x=adx_df.index, y=adx_df['-DI'], name='-DI', line=dict(color='red', width=1)))
+                        fig_adx.add_hline(y=25, line_dash="dot", line_color="gray")
+                        fig_adx.update_layout(title="ADX / DMI", template="plotly_dark", height=250)
+                        st.plotly_chart(fig_adx, use_container_width=True)
+
+                with col_i2:
+                    if show_cci:
+                        cci_series = calculate_cci(ohlc_df)
+                        fig_cci = go.Figure()
+                        fig_cci.add_trace(go.Scatter(x=cci_series.index, y=cci_series, name='CCI', line=dict(color='orange')))
+                        fig_cci.add_hline(y=100, line_dash="dot", line_color="red")
+                        fig_cci.add_hline(y=-100, line_dash="dot", line_color="green")
+                        fig_cci.update_layout(title="CCI", template="plotly_dark", height=250)
+                        st.plotly_chart(fig_cci, use_container_width=True)
+
             col_a1, col_a2 = st.columns(2)
 
             with col_a1:
@@ -522,7 +553,7 @@ with tab4:
 
     col_bt1, col_bt2 = st.columns(2)
     with col_bt1:
-        strategy = st.selectbox("Strategy", ["SMA Crossover", "RSI Mean Reversion"])
+        strategy = st.selectbox("Strategy", ["SMA Crossover", "RSI Mean Reversion", "Bollinger Band Squeeze", "MACD Crossover"])
     with col_bt2:
         bt_days = st.selectbox("Backtest Period", [180, 365, 730], index=1)
 
@@ -601,12 +632,21 @@ with tab5:
         best_perf = df_port.loc[df_port['PnL (%)'].idxmax()]
         worst_perf = df_port.loc[df_port['PnL (%)'].idxmin()]
 
-        col_p1, col_p2, col_p3 = st.columns(3)
+        col_p1, col_p2, col_p3, col_p4 = st.columns(4)
         col_p1.metric("Total Value", f"${total_val:,.2f}")
         tpnl = total_val - total_cost
         tpnl_pct = (tpnl/total_cost*100) if total_cost>0 else 0
         col_p2.metric("Total PnL", f"${tpnl:,.2f}", delta=f"{tpnl_pct:.2f}%")
         col_p3.metric("Top Asset", best_perf['Coin'], delta=f"{best_perf['PnL (%)']:.2f}%")
+
+        # Diversity Score
+        if total_val > 0:
+            weights = (df_port['Value'] / total_val) ** 2
+            hhi = weights.sum()
+            div_score = (1 - hhi) * 100 # 0 to 100
+            col_p4.metric("Diversity Score", f"{div_score:.1f}/100")
+        else:
+            col_p4.metric("Diversity Score", "N/A")
 
         st.dataframe(df_port.style.format({'Price': "${:.2f}", 'Value': "${:.2f}", 'PnL ($)': "${:.2f}", 'PnL (%)': "{:.2f}%"}))
 
@@ -691,6 +731,23 @@ with tab5:
 with tab6:
     st.subheader("🌍 Market Overview")
 
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        st.write("### 🚀 Top Gainers (24h)")
+        gainers, losers = get_top_gainers_losers(limit=5)
+        if not gainers.empty:
+             st.dataframe(gainers.style.format({'current_price': "${:.4f}", 'price_change_percentage_24h': "{:+.2f}%"}))
+        else:
+            st.warning("Could not fetch gainers.")
+
+    with col_m2:
+        st.write("### 📉 Top Losers (24h)")
+        if not losers.empty:
+             st.dataframe(losers.style.format({'current_price': "${:.4f}", 'price_change_percentage_24h': "{:+.2f}%"}))
+        else:
+             st.warning("Could not fetch losers.")
+
+    st.markdown("---")
     st.write("### 🏆 Top 50 Cryptocurrencies by Market Cap")
     with st.spinner("Fetching global market data..."):
         df_mkt = get_coin_market_cap_batch(limit=50)
@@ -736,7 +793,7 @@ with tab6:
 with tab7:
     st.subheader("🧮 Crypto Calculators")
 
-    c_tab1, c_tab2, c_tab3, c_tab4 = st.tabs(["If I Invested...", "Moon Math", "Risk/Reward", "DCA Time Machine"])
+    c_tab1, c_tab2, c_tab3, c_tab4, c_tab5 = st.tabs(["If I Invested...", "Moon Math", "Risk/Reward", "DCA Time Machine", "Impermanent Loss"])
 
     with c_tab1:
         st.write("#### 💸 If I Invested...")
@@ -849,6 +906,18 @@ with tab7:
                     st.plotly_chart(fig_dca, use_container_width=True)
                 else:
                     st.error("Simulation failed. Check data availability.")
+
+    with c_tab5:
+        st.write("#### 💧 Impermanent Loss Calculator")
+        st.write("Estimate potential loss when providing liquidity to a pool.")
+        col_il1, col_il2 = st.columns(2)
+        price_a = col_il1.number_input("Price Change Asset A (%)", value=0.0, step=1.0)
+        price_b = col_il2.number_input("Price Change Asset B (%)", value=0.0, step=1.0)
+
+        il_val = calculate_impermanent_loss(price_a, price_b)
+        st.metric("Impermanent Loss", f"{il_val:.2f}%", delta=f"{il_val:.2f}%")
+        st.info("Note: This assumes a 50/50 Liquidity Pool.")
+
 
 # --- TAB 8: STATS ---
 with tab8:
@@ -1063,7 +1132,7 @@ with tab9:
                 st.error(err)
 
             # Profit
-            st.write("#### 📈 Performance")
+            st.write("#### 📉 Performance")
             profit, p_err = client.get_profit()
             if profit:
                 p_col1, p_col2, p_col3 = st.columns(3)
@@ -1092,20 +1161,13 @@ with tab10:
     </div>
 
     ### 🌟 New Features & Enhancements
-    1.  **Grand Ensemble Forecasting:** Combine Prophet (3 variants), LSTM, ARIMA, and SARIMA models for the ultimate prediction engine.
-    2.  **Long-Term Vision:** Forecast up to 365 days into the future.
-    3.  **Risk Intelligence:** Automatic volatility detection and warnings.
-    4.  **Actionable Signals:** Clear BUY/SELL trading signals based on AI projections.
-    5.  **Sentiment Enhancement:** Enhance forecasts with real-time community sentiment data.
-    6.  **Market Cap Treemap:** Visualize the entire market in one glance.
-    7.  **Multi-Asset Comparison:** Compare performance of up to 5 coins side-by-side.
-    8.  **Advanced Indicators:** Ichimoku Cloud, Stochastic, Pivot Points, SMA Ribbons.
-    9.  **Calculators:** ROI, Moon Math, and Risk/Reward tools.
-    10. **AI Pattern Recognition:** Detect candlestick patterns (Hammer, Engulfing, etc.).
-    11. **Arbitrage Scanner:** Scan global exchanges for price differences.
-    12. **Correlation Matrix:** Visualize asset correlations for diversification.
-    13. **DCA Time Machine:** Backtest Dollar Cost Averaging strategies.
-    14. **Whale Sonar:** Detect unusual volume spikes.
+    1.  **Grand Ensemble Forecasting:** Combine Prophet (3 variants), LSTM, ARIMA, SARIMA, and Random Forest models.
+    2.  **Advanced Indicators:** Added ADX/DMI and CCI for trend and momentum analysis.
+    3.  **Market Intelligence:** View Top Gainers and Losers instantly.
+    4.  **Impermanent Loss Calculator:** Estimate risks for liquidity provision.
+    5.  **Portfolio Analytics:** New Diversity Score to track your asset distribution.
+    6.  **Enhanced Backtesting:** New strategies including Bollinger Band Squeeze and MACD Crossover.
+    7.  **Psychedelic Professional UI:** A completely revamped, immersive visual experience.
 
     ---
     *Disclaimer: This tool is for entertainment and educational purposes only. The future is always in flux.*
