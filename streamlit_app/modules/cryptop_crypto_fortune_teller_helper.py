@@ -483,13 +483,31 @@ def calculate_backtest(df, strategy_type='SMA Crossover'):
         rsi = calculate_rsi(df)
 
         # Vectorized approach using masking and forward fill
-        # This is ~25x faster than iterating through the RSI series (see benchmarks/benchmark_rsi.py)
         signal_series = pd.Series(np.nan, index=rsi.index)
         signal_series[rsi < 30] = 1.0
         signal_series[rsi > 70] = 0.0
 
         # Forward fill to propagate the last active signal
         signal_series = signal_series.ffill().fillna(0.0)
+
+    elif strategy_type == 'Bollinger Band Squeeze':
+        # Buy when price breaks above upper band, Sell when price breaks below lower band
+        bb = calculate_bollinger_bands(df)
+        if not bb.empty:
+            df = df.join(bb)
+            signal_series = pd.Series(np.nan, index=df.index)
+            # Breakout signals
+            signal_series[df['close'] > df['B_Upper']] = 1.0
+            signal_series[df['close'] < df['B_Lower']] = 0.0
+            # Forward fill
+            signal_series = signal_series.ffill().fillna(0.0)
+
+    elif strategy_type == 'MACD Crossover':
+        # Buy when MACD crosses above Signal, Sell when MACD crosses below Signal
+        macd = calculate_macd(df)
+        if not macd.empty:
+            df = df.join(macd)
+            signal_series = pd.Series(np.where(df['MACD'] > df['Signal'], 1.0, 0.0), index=df.index)
 
     # 2. Calculate Returns
     # Market Returns
@@ -572,6 +590,116 @@ def get_batch_historical_prices(coin_ids: list, days: int = 90) -> pd.DataFrame:
     return combined_df
 
 # --- NEW FEATURES ---
+
+@st.cache_data
+def calculate_adx(df, period=14):
+    """
+    Calculate Average Directional Index (ADX).
+    Requires 'high', 'low', 'close'.
+    """
+    if not all(col in df.columns for col in ['high', 'low', 'close']):
+        return pd.Series(dtype=float)
+
+    # +DM, -DM
+    high_diff = df['high'].diff()
+    low_diff = -df['low'].diff()
+
+    plus_dm = np.where((high_diff > low_diff) & (high_diff > 0), high_diff, 0.0)
+    minus_dm = np.where((low_diff > high_diff) & (low_diff > 0), low_diff, 0.0)
+
+    # TR
+    tr = compute_volatility(df, window=1)['ATR'] # ATR with window 1 is basically TR (if correctly implemented)
+    # Actually, let's recalculate TR explicitly to be safe and avoid circular dep issues on windowing
+    h = df['high']
+    l = df['low']
+    c = df['close'].shift(1)
+    tr = pd.concat([h - l, (h - c).abs(), (l - c).abs()], axis=1).max(axis=1)
+
+    # Smooth TR, +DM, -DM
+    tr_smooth = tr.rolling(period).sum()
+    plus_dm_smooth = pd.Series(plus_dm, index=df.index).rolling(period).sum()
+    minus_dm_smooth = pd.Series(minus_dm, index=df.index).rolling(period).sum()
+
+    # +DI, -DI
+    plus_di = 100 * (plus_dm_smooth / tr_smooth)
+    minus_di = 100 * (minus_dm_smooth / tr_smooth)
+
+    # DX
+    dx = 100 * (abs(plus_di - minus_di) / (plus_di + minus_di))
+
+    # ADX
+    adx = dx.rolling(period).mean()
+
+    return pd.DataFrame({'ADX': adx, '+DI': plus_di, '-DI': minus_di})
+
+@st.cache_data
+def calculate_cci(df, period=20):
+    """
+    Calculate Commodity Channel Index (CCI).
+    """
+    if not all(col in df.columns for col in ['high', 'low', 'close']):
+        return pd.Series(dtype=float)
+
+    tp = (df['high'] + df['low'] + df['close']) / 3
+    sma_tp = tp.rolling(period).mean()
+    mad = tp.rolling(period).apply(lambda x: pd.Series(x).mad())
+
+    cci = (tp - sma_tp) / (0.015 * mad)
+    return cci
+
+@st.cache_data(ttl=3600)
+def get_top_gainers_losers(limit=10):
+    """
+    Fetch top gainers and losers from CoinGecko markets.
+    """
+    try:
+        # Fetch top 100 coins to find gainers/losers
+        data = cg.get_coins_markets(vs_currency='usd', order='market_cap_desc', per_page=100, page=1)
+        df = pd.DataFrame(data)
+        if df.empty:
+            return pd.DataFrame(), pd.DataFrame()
+
+        cols = ['name', 'symbol', 'current_price', 'price_change_percentage_24h', 'image']
+        df = df[cols]
+
+        gainers = df.sort_values(by='price_change_percentage_24h', ascending=False).head(limit)
+        losers = df.sort_values(by='price_change_percentage_24h', ascending=True).head(limit)
+
+        return gainers, losers
+    except Exception as e:
+        st.error(f"Error fetching gainers/losers: {e}")
+        return pd.DataFrame(), pd.DataFrame()
+
+def calculate_impermanent_loss(price_a_change, price_b_change):
+    """
+    Calculate Impermanent Loss for a 50/50 Liquidity Pool.
+    Inputs are percentage changes (e.g., 50 for +50%, -10 for -10%).
+    """
+    # Convert pct to ratio (e.g., 50 -> 1.5)
+    ratio_a = 1 + (price_a_change / 100.0)
+    ratio_b = 1 + (price_b_change / 100.0)
+
+    # Price ratio change (k)
+    # If we assume standard Uniswap V2 50/50 pool logic:
+    # IL = 2 * sqrt(price_ratio) / (1 + price_ratio) - 1
+    # But here we have two assets changing independently.
+    # The price ratio change relative to each other is what matters.
+    # Let's simplify: IL is function of the price ratio divergence.
+    # P_new / P_old = ratio_a / ratio_b (if we track pair A/B)
+
+    # Correct formula for 50/50 pool holding asset A and B:
+    # Value_held = 0.5 * A * ratio_a + 0.5 * B * ratio_b
+    # Value_pool = sqrt(ratio_a * ratio_b)
+    # IL = (Value_pool - Value_held) / Value_held
+
+    # Actually, easier formula:
+    # IL = 2 * sqrt(ratio_a * ratio_b) / (ratio_a + ratio_b) - 1
+
+    if ratio_a + ratio_b == 0:
+        return 0.0
+
+    il = (2 * np.sqrt(ratio_a * ratio_b) / (ratio_a + ratio_b)) - 1
+    return il * 100 # Percentage
 
 @st.cache_data
 def calculate_stochastic_oscillator(df, k_window=14, d_window=3):
@@ -836,9 +964,6 @@ def get_coin_market_cap_batch(limit=50):
     except Exception as e:
         st.error(f"Error fetching market cap batch: {e}")
         return pd.DataFrame()
-
-
-# --- NEW FEATURES ---
 
 @st.cache_data
 def detect_candlestick_patterns(df):

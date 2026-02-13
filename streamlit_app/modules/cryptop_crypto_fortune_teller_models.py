@@ -6,6 +6,7 @@ from prophet import Prophet
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Input
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.ensemble import RandomForestRegressor
 import logging
 import os
 import statsmodels.api as sm
@@ -295,9 +296,72 @@ def forecast_lstm(df, periods=30, n_steps=60):
     })
     return forecast_df
 
+@st.cache_data(ttl=3600)
+def forecast_random_forest(df, periods=30, n_lags=14):
+    """
+    Forecast using Random Forest Regressor.
+    """
+    # 🛡️ Sentinel: Enforce Input Limits
+    if periods > MAX_FORECAST_HORIZON:
+        logging.warning(f"RF: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
+        periods = MAX_FORECAST_HORIZON
+
+    if len(df) > MAX_HISTORY_LENGTH:
+        df = df.iloc[-MAX_HISTORY_LENGTH:]
+
+    if df.empty:
+         return pd.DataFrame(columns=['ds', 'yhat'])
+
+    df_rf = df.reset_index()
+    date_col = 'date' if 'date' in df_rf.columns else 'index'
+    df_rf['date'] = pd.to_datetime(df_rf[date_col])
+
+    # Feature Engineering: Lagged features
+    series = df_rf['close']
+    X, y = [], []
+
+    # We need to construct supervised learning dataset
+    # We will use 'n_lags' previous values to predict next one
+
+    # Ensure we have enough data
+    if len(series) <= n_lags:
+        return pd.DataFrame(columns=['ds', 'yhat'])
+
+    values = series.values
+    for i in range(n_lags, len(values)):
+        X.append(values[i-n_lags:i])
+        y.append(values[i])
+
+    X = np.array(X)
+    y = np.array(y)
+
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X, y)
+
+    # Recursive Forecasting
+    preds = []
+    current_lag = values[-n_lags:]
+
+    for _ in range(periods):
+        next_val = model.predict(current_lag.reshape(1, -1))[0]
+        preds.append(next_val)
+        # Shift and append
+        current_lag = np.append(current_lag[1:], next_val)
+
+    last_date = pd.to_datetime(df_rf['date'].iloc[-1])
+    future_dates = [last_date + pd.Timedelta(days=i) for i in range(1, periods+1)]
+
+    forecast_df = pd.DataFrame({
+        'ds': future_dates,
+        'yhat': preds,
+        'yhat_lower': preds, # No CI for standard RF
+        'yhat_upper': preds
+    })
+    return forecast_df
+
 def forecast_general_ensemble(df, model_names, periods=30, sentiment_score=0.0, model_params=None):
     """
-    Grand Ensemble that can combine Prophet, LSTM, ARIMA, SARIMA.
+    Grand Ensemble that can combine Prophet, LSTM, ARIMA, SARIMA, Random Forest.
     Accepts model_params dict to override default configurations.
     """
     if not model_names:
@@ -328,8 +392,11 @@ def forecast_general_ensemble(df, model_names, periods=30, sentiment_score=0.0, 
         elif name == "SARIMA":
             f = forecast_sarima(df, periods)
 
+        elif name == "Random Forest":
+            f = forecast_random_forest(df, periods)
+
         if not f.empty:
-            # Ensure columns exist (LSTM might miss lower/upper)
+            # Ensure columns exist (LSTM/RF might miss lower/upper)
             if 'yhat_lower' not in f.columns: f['yhat_lower'] = f['yhat']
             if 'yhat_upper' not in f.columns: f['yhat_upper'] = f['yhat']
             forecasts.append(f)
