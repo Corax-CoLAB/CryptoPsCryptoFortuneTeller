@@ -6,6 +6,14 @@ class ExchangeManager:
         self.exchange = None
         self.exchange_id = None
 
+    def __repr__(self):
+        status = "Connected" if self.exchange else "Disconnected"
+        ex_id = self.exchange_id if self.exchange_id else "None"
+        return f"ExchangeManager(status='{status}', exchange_id='{ex_id}')"
+
+    def __str__(self):
+        return self.__repr__()
+
     def connect(self, exchange_id, api_key, api_secret, password=None):
         """
         Connect to an exchange using CCXT.
