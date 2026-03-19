@@ -5,8 +5,15 @@ class FreqtradeManager:
     def __init__(self, api_url, username, password):
         self.api_url = api_url.rstrip('/')
         self.username = username
-        self.password = password
+        self._password = password
         self.access_token = None
+
+    def __repr__(self):
+        token_status = "Set" if self.access_token else "None"
+        return f"FreqtradeManager(api_url='{self.api_url}', username='{self.username}', access_token={token_status})"
+
+    def __str__(self):
+        return self.__repr__()
 
     def _headers(self):
         if self.access_token:
@@ -23,7 +30,7 @@ class FreqtradeManager:
             # Let's try standard approach for Freqtrade API
             # Note: Freqtrade API typically uses Basic Auth to get the token, or just Basic Auth for requests.
             # But the modern one uses JWT.
-            resp = requests.post(auth_url, auth=(self.username, self.password), timeout=5)
+            resp = requests.post(auth_url, auth=(self.username, self._password), timeout=5)
 
             if resp.status_code == 200:
                 data = resp.json()

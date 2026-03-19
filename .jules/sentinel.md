@@ -47,3 +47,8 @@
 **Vulnerability:** The `get_fear_and_greed_index` function failed to check the HTTP status code of the external API response (`requests.get`), potentially leading to silent failures or processing of invalid data (e.g., 500 error body) as valid JSON.
 **Learning:** Relying solely on `try...except` blocks without checking `response.ok` or calling `raise_for_status()` masks critical upstream failures and can lead to unpredictable application state or confusing error messages.
 **Prevention:** Enforced usage of `response.raise_for_status()` immediately after all `requests` calls and added a test case (`tests/test_fng_security.py`) to verify correct error propagation.
+
+## 2026-12-01 - [Medium Risk] Credential Leakage in Logs
+**Vulnerability:** `FreqtradeManager` and `ExchangeManager` objects stored credentials (password, API keys) in instance variables without masking them in `__repr__` or `__str__`. Accidental logging of these objects (e.g., during debugging or error reporting) would expose plaintext secrets.
+**Learning:** Python's default `__repr__` is safe, but custom classes or libraries (like `ccxt`) might have chatty string representations. Explicitly implementing `__repr__` to mask sensitive fields is a critical defense-in-depth measure. Also, private attributes (prefixed with `_`) help signal sensitive data.
+**Prevention:** Implemented secure `__repr__` methods in manager classes and renamed `password` to `_password` in `FreqtradeManager`. Added `tests/test_security_fix_verification.py` to enforce this masking.
