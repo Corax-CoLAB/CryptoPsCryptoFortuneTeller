@@ -21,7 +21,7 @@ from modules.cryptop_crypto_fortune_teller_helper import get_fear_and_greed_inde
 
 class TestFnGSecurity(unittest.TestCase):
 
-    @patch('modules.cryptop_crypto_fortune_teller_helper.requests.get')
+    @patch('modules.cryptop_crypto_fortune_teller_helper.req_session.get')
     def test_fng_raise_for_status(self, mock_get):
         """
         Sentinel Security Test:
@@ -37,7 +37,7 @@ class TestFnGSecurity(unittest.TestCase):
         if not mock_response.raise_for_status.called:
              self.fail("Security Enhancement Required: response.raise_for_status() was not called.")
 
-    @patch('modules.cryptop_crypto_fortune_teller_helper.requests.get')
+    @patch('modules.cryptop_crypto_fortune_teller_helper.req_session.get')
     def test_fng_user_agent(self, mock_get):
         """
         Sentinel Security Test:
@@ -60,7 +60,7 @@ class TestFnGSecurity(unittest.TestCase):
 
         self.assertIn('CryptoFortuneTeller', headers['User-Agent'], "User-Agent should be descriptive.")
 
-    @patch('modules.cryptop_crypto_fortune_teller_helper.requests.get')
+    @patch('modules.cryptop_crypto_fortune_teller_helper.req_session.get')
     def test_fng_timeout_consistency(self, mock_get):
         """
         Sentinel Security Test:

@@ -4,6 +4,8 @@ import numpy as np
 from pycoingecko import CoinGeckoAPI
 import streamlit as st
 import requests
+from requests.adapters import HTTPAdapter, Retry
+import time
 import concurrent.futures
 import re
 import ccxt
@@ -12,9 +14,49 @@ import ccxt
 cg = CoinGeckoAPI()
 cg.request_timeout = 20  # Sentinel: Enforce timeout to prevent hanging
 
+def get_session():
+    """
+    Technical Improvement 1: Create a robust requests Session with retries and backoff
+    to handle intermittent API failures.
+    """
+    session = requests.Session()
+    retry = Retry(connect=3, backoff_factor=0.5, status_forcelist=[429, 500, 502, 503, 504])
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
+
+# Global robust session
+req_session = get_session()
+
+# Replace cg direct requests to have retry wrapping where manual
+def cg_retry_call(func, *args, retries=3, delay=1, **kwargs):
+    for attempt in range(retries):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if attempt < retries - 1:
+                time.sleep(delay * (attempt + 1))
+            else:
+                raise e
+
+
 # Sentinel: Prevent Timedelta Overflow (DoS)
 # pandas Timedelta limit is ~106,752 days.
 MAX_HISTORY_DAYS = 20000
+
+
+def downcast_dtypes(df):
+    """
+    Technical Improvement 3: Memory Optimization
+    Downcasts numerical columns to float32 to save memory, especially critical
+    for large batch historical data fetching.
+    """
+    fcols = df.select_dtypes('float').columns
+    icols = df.select_dtypes('integer').columns
+    df[fcols] = df[fcols].apply(pd.to_numeric, downcast='float')
+    df[icols] = df[icols].apply(pd.to_numeric, downcast='integer')
+    return df
 
 def validate_coin_id(coin_id):
     """
@@ -36,7 +78,7 @@ def get_coin_list():
     Returns a DataFrame with columns [id, symbol, name].
     """
     try:
-        coins = cg.get_coins_list()  # get list of coins with id, symbol, name
+        coins = cg_retry_call(cg.get_coins_list)  # get list of coins with id, symbol, name
         df_coins = pd.DataFrame(coins)
         return df_coins
     except Exception as e:
@@ -53,13 +95,13 @@ def _fetch_historical_prices_cached(coin_id, vs_currency='usd', days='max'):
         # Sentinel: Pass timeout to prevent hanging if supported by wrapper
         # Using 3 seconds timeout
         try:
-             data = cg.get_coin_market_chart_by_id(id=coin_id, vs_currency=vs_currency, days=days, timeout=3)
+             data = cg_retry_call(cg.get_coin_market_chart_by_id, id=coin_id, vs_currency=vs_currency, days=days, timeout=3)
         except TypeError:
              # Fallback if timeout kwarg is not supported, or use direct request
              # Since we know wrapper is old or custom, we force direct request here to be safe
              url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
              params = {'vs_currency': vs_currency, 'days': days}
-             r = requests.get(url, params=params, timeout=3)
+             r = req_session.get(url, params=params, timeout=5)
              r.raise_for_status()
              data = r.json()
 
@@ -138,7 +180,7 @@ def _fetch_historical_ohlc_cached(coin_id, vs_currency='usd', days='max'):
     Uses 'days' as a resolution bucket (1, 30, or 'max') to optimize caching.
     """
     try:
-        ohlc_data = cg.get_coin_ohlc_by_id(id=coin_id, vs_currency=vs_currency, days=days)
+        ohlc_data = cg_retry_call(cg.get_coin_ohlc_by_id, id=coin_id, vs_currency=vs_currency, days=days)
         df = pd.DataFrame(ohlc_data, columns=['timestamp','open','high','low','close'])
         df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
         df.set_index('date', inplace=True)
@@ -305,8 +347,7 @@ def get_coin_metrics(coin_id):
         return {}
 
     try:
-        data = cg.get_coin_by_id(id=coin_id, localization='false', tickers='false',
-                                 market_data='false', community_data='true', developer_data='true', sparkline='false')
+        data = cg_retry_call(cg.get_coin_by_id, id=coin_id, localization='false', tickers='false', market_data='false', community_data='true', developer_data='true', sparkline='false')
         comm = data.get('community_data', {}) or {}
         dev = data.get('developer_data', {}) or {}
         metrics = {
@@ -340,15 +381,7 @@ def get_coin_market_data(coin_id):
         return {}
 
     try:
-        data = cg.get_coin_by_id(
-            id=coin_id,
-            localization='false',
-            tickers='false',
-            market_data='true',
-            community_data='false',
-            developer_data='false',
-            sparkline='false'
-        )
+        data = cg_retry_call(cg.get_coin_by_id, id=coin_id, localization='false', tickers='false', market_data='true', community_data='false', developer_data='false', sparkline='false')
         market_data = data.get('market_data', {})
         if not market_data:
             return {}
@@ -370,7 +403,7 @@ def get_fear_and_greed_index():
     try:
         # Sentinel: Added User-Agent, extended timeout, and status check
         headers = {'User-Agent': 'CryptoFortuneTeller/1.0'}
-        r = requests.get(url, headers=headers, timeout=20)
+        r = req_session.get(url, headers=headers, timeout=20)
         r.raise_for_status()
         data = r.json()
         if data.get('data'):
@@ -434,7 +467,7 @@ def get_trending_coins():
     Fetch top 7 trending coins on CoinGecko.
     """
     try:
-        trending = cg.get_search_trending()
+        trending = cg_retry_call(cg.get_search_trending)
         return trending.get('coins', [])
     except Exception as e:
         st.error(f"Error fetching trending coins: {e}")
@@ -448,7 +481,7 @@ def get_current_price(coin_ids, vs_currencies='usd,eur,btc,eth'):
     if isinstance(coin_ids, list):
         coin_ids = ','.join(coin_ids)
     try:
-        prices = cg.get_price(ids=coin_ids, vs_currencies=vs_currencies)
+        prices = cg_retry_call(cg.get_price, ids=coin_ids, vs_currencies=vs_currencies)
         return prices
     except Exception as e:
         st.error(f"Error fetching prices: {e}")
@@ -499,6 +532,20 @@ def calculate_backtest(df, strategy_type='SMA Crossover'):
             # Breakout signals
             signal_series[df['close'] > df['B_Upper']] = 1.0
             signal_series[df['close'] < df['B_Lower']] = 0.0
+            # Forward fill
+            signal_series = signal_series.ffill().fillna(0.0)
+
+    elif strategy_type == 'VWAP Reversion':
+        # Buy when price dips 5% below VWAP, Sell when price crosses above VWAP
+        # Technical Improvement 4: VWAP Reversion Strategy
+        vwap = calculate_vwap(df)
+        if not vwap.empty:
+            df['vwap'] = vwap
+            signal_series = pd.Series(np.nan, index=df.index)
+            # Threshold: 5% below VWAP
+            buy_threshold = df['vwap'] * 0.95
+            signal_series[df['close'] < buy_threshold] = 1.0
+            signal_series[df['close'] > df['vwap']] = 0.0
             # Forward fill
             signal_series = signal_series.ffill().fillna(0.0)
 
@@ -586,8 +633,10 @@ def get_batch_historical_prices(coin_ids: list, days: int = 90) -> pd.DataFrame:
         return pd.DataFrame()
 
     # Concatenate all at once along columns (axis=1)
+    # Technical Improvement 3: Optimize memory footprint before concatenation
+    dfs = [downcast_dtypes(d) for d in dfs]
     combined_df = pd.concat(dfs, axis=1, join='outer')
-    return combined_df
+    return downcast_dtypes(combined_df)
 
 # --- NEW FEATURES ---
 
@@ -654,7 +703,7 @@ def get_top_gainers_losers(limit=10):
     """
     try:
         # Fetch top 100 coins to find gainers/losers
-        data = cg.get_coins_markets(vs_currency='usd', order='market_cap_desc', per_page=100, page=1)
+        data = cg_retry_call(cg.get_coins_markets, vs_currency='usd', order='market_cap_desc', per_page=100, page=1)
         df = pd.DataFrame(data)
         if df.empty:
             return pd.DataFrame(), pd.DataFrame()
@@ -957,7 +1006,7 @@ def get_coin_market_cap_batch(limit=50):
     """
     try:
         # vs_currency='usd' is default
-        data = cg.get_coins_markets(vs_currency='usd', order='market_cap_desc', per_page=limit, page=1)
+        data = cg_retry_call(cg.get_coins_markets, vs_currency='usd', order='market_cap_desc', per_page=limit, page=1)
         df = pd.DataFrame(data)
         # We want: id, symbol, name, market_cap, current_price, price_change_percentage_24h
         return df[['id', 'symbol', 'name', 'market_cap', 'current_price', 'price_change_percentage_24h', 'total_volume']]
@@ -1148,7 +1197,7 @@ def get_historical_volume(coin_id, days=30):
         return pd.DataFrame()
 
     try:
-        data = cg.get_coin_market_chart_by_id(id=coin_id, vs_currency='usd', days=days)
+        data = cg_retry_call(cg.get_coin_market_chart_by_id, id=coin_id, vs_currency='usd', days=days)
         volumes = data.get('total_volumes', [])
         df = pd.DataFrame(volumes, columns=['timestamp', 'volume'])
         df['date'] = pd.to_datetime(df['timestamp'], unit='ms')

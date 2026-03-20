@@ -5,6 +5,8 @@ import streamlit as st
 from prophet import Prophet
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Input
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import RandomForestRegressor
 import logging
@@ -12,6 +14,29 @@ import os
 import statsmodels.api as sm
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+import warnings
+import itertools
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+warnings.simplefilter('ignore', ConvergenceWarning)
+
+def get_best_arima(series, max_p=3, max_q=3, d=1):
+    """
+    Technical Improvement 2: Auto-ARIMA
+    Finds best ARIMA(p,d,q) order based on AIC.
+    """
+    best_aic = float("inf")
+    best_order = (0, d, 0)
+    for p, q in itertools.product(range(max_p+1), range(max_q+1)):
+        try:
+            model = ARIMA(series, order=(p, d, q))
+            results = model.fit()
+            if results.aic < best_aic:
+                best_aic = results.aic
+                best_order = (p, d, q)
+        except:
+            continue
+    return best_order
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -149,7 +174,9 @@ def forecast_arima(df, periods=30):
         # Ensure frequency is set if possible, otherwise indices are integers
         # We will use integer steps for forecasting and map back to dates
 
-        model = ARIMA(series, order=(5, 1, 0))
+        # Technical Improvement 2: Dynamic ARIMA order selection (Auto-ARIMA)
+        best_order = get_best_arima(series, max_p=3, max_q=3, d=1)
+        model = ARIMA(series, order=best_order)
         model_fit = model.fit()
 
         # Forecast
@@ -196,8 +223,9 @@ def forecast_sarima(df, periods=30):
 
         series = df['close']
 
-        # Using a simpler seasonal order to ensure stability in generic cases
-        model = SARIMAX(series, order=(1, 1, 1), seasonal_order=(0, 1, 1, 7))
+        # Technical Improvement 2: Dynamic SARIMA order selection based on best ARIMA base
+        best_order = get_best_arima(series, max_p=2, max_q=2, d=1) # Reduced grid for speed
+        model = SARIMAX(series, order=best_order, seasonal_order=(0, 1, 1, 7))
         model_fit = model.fit(disp=False)
 
         forecast_result = model_fit.get_forecast(steps=periods)
@@ -262,16 +290,22 @@ def forecast_lstm(df, periods=30, n_steps=60):
 
     X = X.reshape((X.shape[0], X.shape[1], 1))
 
-    # Explicit Input layer
+    # Technical Improvement 5: LSTM Architecture Upgrade
     model = Sequential([
         Input(shape=(n_steps, 1)),
+        LSTM(100, return_sequences=True), # Increased complexity
+        Dropout(0.2), # Prevent overfitting
         LSTM(50),
+        Dropout(0.2),
+        Dense(25, activation='relu'),
         Dense(1)
     ])
     model.compile(optimizer='adam', loss='mse')
-    # ⚡ Bolt Optimization: Increased batch_size to 32 (was 16)
-    # Reduces training time by ~20% while maintaining sufficient updates for convergence on daily data
-    model.fit(X, y, epochs=5, batch_size=32, verbose=0)
+
+    # Early stopping
+    early_stop = EarlyStopping(monitor='loss', patience=5, restore_best_weights=True)
+
+    model.fit(X, y, epochs=20, batch_size=32, verbose=0, callbacks=[early_stop])
 
     forecast_input = series_scaled[-n_steps:].reshape(1, n_steps, 1).astype(np.float32)
     preds = np.zeros(periods, dtype=np.float32)

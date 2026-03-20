@@ -81,6 +81,42 @@ with col2:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
+# Feature: Ticker Tape (Visual Improvement 1)
+# Fetch trending coins quickly for the banner
+with st.spinner("Initializing Oracle..."):
+    gainers, losers = get_top_gainers_losers(limit=10)
+
+if not gainers.empty:
+    ticker_items = []
+    for _, row in gainers.head(5).iterrows():
+        sym = row['symbol'].upper()
+        pct = row['price_change_percentage_24h']
+        color = "#00FF00" if pct > 0 else "#FF0000"
+        ticker_items.append(f"<span style='margin-right: 30px; font-weight: bold;'>🔥 {html.escape(str(sym))} <span style='color: {html.escape(str(color))}'>{html.escape(f'{pct:+.2f}%')}</span></span>")
+
+    for _, row in losers.head(5).iterrows():
+        sym = row['symbol'].upper()
+        pct = row['price_change_percentage_24h']
+        color = "#00FF00" if pct > 0 else "#FF0000"
+        ticker_items.append(f"<span style='margin-right: 30px; font-weight: bold;'>🧊 {html.escape(str(sym))} <span style='color: {html.escape(str(color))}'>{html.escape(f'{pct:+.2f}%')}</span></span>")
+
+    ticker_html = f"""
+    <div style="width: 100%; overflow: hidden; background: linear-gradient(90deg, #150020, #2a0e3b, #150020); border-bottom: 2px solid #FF00FF; border-top: 2px solid #00FFFF; padding: 10px 0; margin-bottom: 20px;">
+        <div style="white-space: nowrap; animation: ticker 25s linear infinite; font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: white;">
+            {''.join(ticker_items)}
+            {''.join(ticker_items)}
+        </div>
+    </div>
+    <style>
+        @keyframes ticker {{
+            0%   {{ transform: translateX(100%); }}
+            100% {{ transform: translateX(-100%); }}
+        }}
+    </style>
+    """
+    st.markdown(''.join([ticker_html]), unsafe_allow_html=True)
+
+
 # 4) Sidebar
 with st.sidebar:
     st.header("🔍 User Inputs")
@@ -474,6 +510,9 @@ with tab2:
                 fig_rsi.add_trace(go.Scatter(x=rsi.index, y=rsi, name='RSI', line=dict(color='#FF4500')))
                 fig_rsi.add_hline(y=70, line_dash="dot", line_color="red")
                 fig_rsi.add_hline(y=30, line_dash="dot", line_color="green")
+                # Technical Improvement: Advanced Shading
+                fig_rsi.add_hrect(y0=70, y1=100, fillcolor="red", opacity=0.1, layer="below", line_width=0)
+                fig_rsi.add_hrect(y0=0, y1=30, fillcolor="green", opacity=0.1, layer="below", line_width=0)
                 fig_rsi.update_layout(title="RSI", template="plotly_dark", height=250, yaxis_range=[0, 100])
                 st.plotly_chart(fig_rsi, use_container_width=True)
 
@@ -481,9 +520,9 @@ with tab2:
                 macd_df = calculate_macd(ohlc_df)
                 if not macd_df.empty:
                     fig_macd = make_subplots(specs=[[{"secondary_y": False}]])
-                    fig_macd.add_trace(go.Bar(x=macd_df.index, y=macd_df['Histogram'], name='Hist', marker_color='#444'))
-                    fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['MACD'], name='MACD', line=dict(color='#00FFFF')))
-                    fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['Signal'], name='Signal', line=dict(color='#FF4500')))
+                    fig_macd.add_trace(go.Bar(x=macd_df.index, y=macd_df['Histogram'], name='Hist', marker_color=np.where(macd_df['Histogram'] < 0, 'red', 'green')))
+                    fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['MACD'], name='MACD', line=dict(color='#00FFFF', width=2)))
+                    fig_macd.add_trace(go.Scatter(x=macd_df.index, y=macd_df['Signal'], name='Signal', line=dict(color='#FF4500', width=2), fill='tonexty', fillcolor='rgba(255, 69, 0, 0.2)'))
                     fig_macd.update_layout(title="MACD", template="plotly_dark", height=250)
                     st.plotly_chart(fig_macd, use_container_width=True)
 
@@ -553,7 +592,7 @@ with tab4:
 
     col_bt1, col_bt2 = st.columns(2)
     with col_bt1:
-        strategy = st.selectbox("Strategy", ["SMA Crossover", "RSI Mean Reversion", "Bollinger Band Squeeze", "MACD Crossover"])
+        strategy = st.selectbox("Strategy", ["SMA Crossover", "RSI Mean Reversion", "Bollinger Band Squeeze", "MACD Crossover", "VWAP Reversion"])
     with col_bt2:
         bt_days = st.selectbox("Backtest Period", [180, 365, 730], index=1)
 
@@ -650,8 +689,16 @@ with tab5:
 
         st.dataframe(df_port.style.format({'Price': "${:.2f}", 'Value': "${:.2f}", 'PnL ($)': "${:.2f}", 'PnL (%)': "{:.2f}%"}))
 
-        fig_pie = px.pie(df_port, values='Value', names='Coin', title='Allocation', hole=0.3)
-        fig_pie.update_layout(template="plotly_dark")
+        # Visual Improvement 5: Sunburst / Donut Upgrade
+        df_port['Root'] = 'Portfolio'
+        fig_pie = px.sunburst(
+            df_port, path=['Root', 'Coin'], values='Value',
+            color='PnL (%)', color_continuous_scale='RdYlGn', color_continuous_midpoint=0,
+            title='Hierarchical Asset Allocation & Performance',
+            hover_data=['Amount', 'Value', 'PnL ($)']
+        )
+        fig_pie.update_traces(textinfo="label+percent entry")
+        fig_pie.update_layout(template="plotly_dark", height=500, margin=dict(t=50, l=25, r=25, b=25))
         st.plotly_chart(fig_pie, use_container_width=True)
 
         if st.button("Clear Portfolio"):
