@@ -10,6 +10,13 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B.svg?style=for-the-badge&logo=streamlit)](https://cryptop.coraxcolab.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Security: Checked](https://img.shields.io/badge/Security-AST%20%26%20Regex%20Checked-brightgreen.svg?style=for-the-badge)](https://github.com/PelleNybe)
+[![CI](https://github.com/PelleNybe/CryptoFortuneTeller/actions/workflows/ci.yml/badge.svg)](https://github.com/PelleNybe/CryptoFortuneTeller/actions/workflows/ci.yml)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](http://makeapullrequest.com)
+[![GitHub issues](https://img.shields.io/github/issues/PelleNybe/CryptoFortuneTeller.svg?style=for-the-badge)](https://github.com/PelleNybe/CryptoFortuneTeller/issues)
+[![GitHub stars](https://img.shields.io/github/stars/PelleNybe/CryptoFortuneTeller.svg?style=for-the-badge)](https://github.com/PelleNybe/CryptoFortuneTeller/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/PelleNybe/CryptoFortuneTeller.svg?style=for-the-badge)](https://github.com/PelleNybe/CryptoFortuneTeller/network)
+[![GitHub watchers](https://img.shields.io/github/watchers/PelleNybe/CryptoFortuneTeller.svg?style=for-the-badge)](https://github.com/PelleNybe/CryptoFortuneTeller/watchers)
+[![GitHub contributors](https://img.shields.io/github/contributors/PelleNybe/CryptoFortuneTeller.svg?style=for-the-badge)](https://github.com/PelleNybe/CryptoFortuneTeller/graphs/contributors)
 
 <img src="streamlit_app/assets/crypto.gif" alt="Crypto Animation" width="600">
 
@@ -189,3 +196,13 @@ The price forecasts, backtests, and technical analysis provided by this tool are
   <p>&copy; 2024 Corax CoLAB. All rights reserved.</p>
 </div>
 
+
+## 🤝 Community & Contributing
+
+We love contributions from the community! Whether it's fixing bugs, adding new features, or improving documentation, your help is welcome.
+
+*   **[Read our Contributing Guidelines](CONTRIBUTING.md)** to learn how to get started.
+*   **[Review our Code of Conduct](CODE_OF_CONDUCT.md)** to understand the standards for participating in our community.
+*   **[Check our Security Policy](SECURITY.md)** if you need to report a vulnerability privately.
+
+If you like the project, please consider giving it a ⭐ Star, sharing it with your friends, or Forking it to make your own changes!
