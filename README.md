@@ -66,6 +66,16 @@
 
 <br>
 
+## 📸 Screenshots
+
+<div align="center">
+  <img src="streamlit_app/assets/screenshot_1.png" alt="Screenshot 1" width="45%">
+  <img src="streamlit_app/assets/screenshot_2.png" alt="Screenshot 2" width="45%">
+  <br>
+  <img src="streamlit_app/assets/screenshot_3.png" alt="Screenshot 3" width="45%">
+  <img src="streamlit_app/assets/screenshot_4.png" alt="Screenshot 4" width="45%">
+</div>
+
 ## 🚀 Live Demo & Connect
 
 <div align="center">
