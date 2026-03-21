@@ -45,6 +45,62 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 MAX_FORECAST_HORIZON = 365
 MAX_HISTORY_LENGTH = 2000
 
+
+@st.cache_data(ttl=86400)
+def auto_tune_prophet(df, param_grid=None):
+    """
+    Perform basic grid search cross-validation for Prophet hyperparameters.
+    """
+    from prophet import Prophet
+    from prophet.diagnostics import cross_validation, performance_metrics
+    import itertools
+
+    if param_grid is None:
+        param_grid = {
+            'changepoint_prior_scale': [0.001, 0.01, 0.1, 0.5],
+            'seasonality_prior_scale': [0.01, 0.1, 1.0, 10.0]
+        }
+
+    # Generate all combinations of parameters
+    all_params = [dict(zip(param_grid.keys(), v)) for v in itertools.product(*param_grid.values())]
+    rmses = []  # Store the RMSEs for each params here
+
+    if len(df) < 100:
+        return {'changepoint_prior_scale': 0.05, 'seasonality_prior_scale': 10.0}
+
+    # Prepare data
+    df_cv = pd.DataFrame({'ds': df.index, 'y': df['close'].values})
+
+    # We will just do a fast split for tuning to save time (not full CV)
+    split_idx = int(len(df_cv) * 0.8)
+    train_df = df_cv.iloc[:split_idx]
+    test_df = df_cv.iloc[split_idx:]
+
+    best_params = all_params[0]
+    best_rmse = float('inf')
+
+    # Find the best parameters
+    for params in all_params:
+        try:
+            m = Prophet(**params, weekly_seasonality=False, daily_seasonality=False)
+            m.fit(train_df)
+            future = m.make_future_dataframe(periods=len(test_df))
+            forecast = m.predict(future)
+
+            # Calculate RMSE on test set
+            y_pred = forecast['yhat'].iloc[-len(test_df):].values
+            y_true = test_df['y'].values
+            rmse = np.sqrt(np.mean((y_true - y_pred) ** 2))
+
+            if rmse < best_rmse:
+                best_rmse = rmse
+                best_params = params
+        except Exception:
+            continue
+
+    return best_params
+
+
 def get_prophet_config(model_name, overrides=None):
     """
     Returns hyperparameters for different Prophet model configurations.
@@ -479,3 +535,44 @@ def forecast_prophet_ensemble(df, model_names, periods=30, sentiment_score=0.0):
      # wrapper:
      mapped_names = [f"Prophet ({n})" if "Prophet" not in n else n for n in model_names]
      return forecast_general_ensemble(df, mapped_names, periods, sentiment_score)
+
+@st.cache_data(ttl=3600)
+def forecast_monte_carlo(df, periods=30, num_simulations=1000):
+    """
+    Forecast future prices using Monte Carlo simulation based on Geometric Brownian Motion (GBM).
+    """
+    if df.empty or 'close' not in df.columns:
+        return pd.DataFrame()
+
+    returns = df['close'].pct_change().dropna()
+    mu = returns.mean()
+    sigma = returns.std()
+
+    last_price = df['close'].iloc[-1]
+
+    simulations = np.zeros((periods, num_simulations))
+    simulations[0] = last_price
+
+    # Generate random shocks
+    shocks = np.random.normal(0, 1, (periods - 1, num_simulations))
+
+    for t in range(1, periods):
+        simulations[t] = simulations[t-1] * np.exp((mu - (sigma**2) / 2) + sigma * shocks[t-1])
+
+    # Calculate percentiles (Median, 5th, 95th)
+    mean_sim = np.median(simulations, axis=1)
+    lower_sim = np.percentile(simulations, 5, axis=1)
+    upper_sim = np.percentile(simulations, 95, axis=1)
+
+    # Create DataFrame
+    last_date = df.index[-1]
+    future_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=periods)
+
+    res_df = pd.DataFrame({
+        'ds': future_dates,
+        'yhat': mean_sim,
+        'yhat_lower': lower_sim,
+        'yhat_upper': upper_sim
+    })
+
+    return res_df

@@ -40,6 +40,8 @@
 - **Ensemble Projections:** 30-day ensemble forecast to estimate the future value of specific assets in your portfolio.
 - **Random Forest & ARIMA:** Advanced statistical and ensemble methods for comprehensive price prediction.
 - **Customizable Horizon:** Forecast up to 365 days into the future (capped for performance).
+- **Monte Carlo Simulations:** Geometric Brownian Motion model for probabilistic price paths.
+- **Hyperparameter Auto-Tuning:** Automated grid-search CV for finding optimal Prophet parameters.
 
 ### 📈 Advanced Technical Analysis
 - **Interactive Candlestick Charts:** Zoom, pan, and analyze price action across multiple timeframes.
@@ -58,8 +60,10 @@
 
 ### 💼 Portfolio & Market Tools
 - **Portfolio Tracker:** Monitor your holdings, track PnL, view allocation pie charts, and project future wealth.
+- **Advanced Risk Metrics:** Calculate Sharpe Ratio, Sortino Ratio, and Max Drawdown for your portfolio.
 - **Market Heatmap:** Visualize the top 50 coins by market cap using an interactive Treemap.
-- **Smart Calculators:** DCA, ROI, "Moon Math", and Risk/Reward planning.
+- **Smart Calculators:** DCA, ROI, "Moon Math", Risk/Reward planning, and Black-Scholes Options Pricing.
+- **Order Book Depth:** Fetch real-time L2 order books via CCXT and visualize bid-ask imbalances.
 - **Social Intel:** Developer activity (GitHub) and community sentiment (Reddit/Twitter).
 
 </details>

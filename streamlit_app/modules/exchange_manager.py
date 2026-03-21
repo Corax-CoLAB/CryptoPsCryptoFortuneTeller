@@ -37,6 +37,20 @@ class ExchangeManager:
             self.exchange = None
             return False, f"Connection error: {str(e)}"
 
+
+    def get_order_book(self, symbol, limit=100):
+        """
+        Technical Improvement 4: Fetch L2 Order Book depth for analysis.
+        """
+        if not self.exchange:
+            return None, "Not connected to any exchange."
+        try:
+            order_book = self.exchange.fetch_order_book(symbol, limit)
+            return order_book, "Success"
+        except Exception as e:
+            self.logger.error(f"Failed to fetch order book: {str(e)}", exc_info=True)
+            return None, f"Failed to fetch order book: {str(e)}"
+
     def get_balance(self):
         """
         Fetch balance and return as a DataFrame.

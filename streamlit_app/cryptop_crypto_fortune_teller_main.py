@@ -11,6 +11,8 @@ import datetime
 import html
 
 from modules.cryptop_crypto_fortune_teller_helper import (
+    get_historical_volume,
+    calculate_black_scholes,
     get_coin_list,
     get_historical_prices,
     get_historical_ohlc,
@@ -50,6 +52,7 @@ from modules.cryptop_crypto_fortune_teller_helper import (
 )
 from modules.utils import validate_url
 from modules.cryptop_crypto_fortune_teller_models import (
+    auto_tune_prophet,
     forecast_general_ensemble
 )
 from modules.exchange_manager import ExchangeManager
@@ -153,7 +156,8 @@ with st.sidebar:
                 "LSTM",
                 "ARIMA",
                 "SARIMA",
-                "Random Forest"
+                "Random Forest",
+                "Monte Carlo (GBM)"
             ],
             default=["Prophet (Standard)", "Random Forest"],
             help="Combine multiple statistical and AI models for robust predictions."
@@ -173,6 +177,18 @@ with st.sidebar:
             p_seasonality = st.slider("Seasonality Prior Scale", 0.01, 20.0, 10.0, step=0.1, help="Strength of seasonality.")
             p_season_mode = st.radio("Seasonality Mode", ["additive", "multiplicative"], index=0)
 
+            auto_tune = st.checkbox("Auto-Tune Prophet Hyperparameters (Beta)", value=False, help="Run an automatic grid search to find optimal changepoint and seasonality scales. Overrides manual sliders.")
+
+            if auto_tune:
+                with st.spinner("Auto-tuning Prophet models..."):
+                    # Use a small historical sample for speed
+                    hist_for_tune = get_historical_prices(coin_id, days=365)
+                    if not hist_for_tune.empty:
+                        best_params = auto_tune_prophet(hist_for_tune)
+                        st.success(f"Tuning complete. Best CPS: {best_params.get('changepoint_prior_scale')}, SPS: {best_params.get('seasonality_prior_scale')}")
+                        p_changepoint = best_params.get('changepoint_prior_scale', p_changepoint)
+                        p_seasonality = best_params.get('seasonality_prior_scale', p_seasonality)
+
             model_params = {
                 'changepoint_prior_scale': p_changepoint,
                 'seasonality_prior_scale': p_seasonality,
@@ -186,9 +202,28 @@ with st.sidebar:
     fng = get_fear_and_greed_index()
     if fng:
         val = int(fng['value'])
-        color = "red" if val < 40 else "green" if val > 60 else "orange"
-        st.markdown(f"<h2 style='color: {html.escape(color)}; text-align: center;'>{html.escape(str(val))}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<p style='text-align: center;'>{html.escape(fng['classification'])}</p>", unsafe_allow_html=True)
+
+        fig_fng = go.Figure(go.Indicator(
+            mode = "gauge+number+delta",
+            value = val,
+            title = {'text': fng['classification'], 'font': {'size': 18}},
+            gauge = {
+                'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                'bar': {'color': "white"},
+                'bgcolor': "black",
+                'borderwidth': 2,
+                'bordercolor': "gray",
+                'steps': [
+                    {'range': [0, 40], 'color': "red"},
+                    {'range': [40, 60], 'color': "orange"},
+                    {'range': [60, 100], 'color': "green"}],
+                'threshold': {
+                    'line': {'color': "red", 'width': 4},
+                    'thickness': 0.75,
+                    'value': 90}}))
+
+        fig_fng.update_layout(height=250, margin=dict(t=30, b=0, l=30, r=30), paper_bgcolor="rgba(0,0,0,0)", font={'color': "white"})
+        st.plotly_chart(fig_fng, use_container_width=True)
     else:
         st.write("N/A")
 
@@ -396,51 +431,65 @@ with tab2:
 
             sar_series = calculate_parabolic_sar(ohlc_df) if show_sar else pd.Series(dtype=float)
 
-            # Plot 1: Main Chart
-            fig_main = go.Figure()
+            # Plot 1: Main Chart with Volume Subplot
+            # Visual Improvement 3: Candlestick Chart with Volume Subplot
+            fig_main = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                                     vertical_spacing=0.03, subplot_titles=('Price Action', 'Volume'),
+                                     row_width=[0.2, 0.7])
+
             fig_main.add_trace(go.Candlestick(
                 x=ohlc_df.index, open=ohlc_df['open'], high=ohlc_df['high'],
                 low=ohlc_df['low'], close=ohlc_df['close'], name='OHLC'
-            ))
+            ), row=1, col=1)
+
+            # Fetch and add volume if available
+            vol_for_chart = get_historical_volume(coin_id, days=days_back)
+            if not vol_for_chart.empty:
+                # Merge to align dates
+                merged_vol = ohlc_df.join(vol_for_chart, how='left').fillna(0)
+                colors = ['green' if row['open'] - row['close'] >= 0 else 'red' for index, row in merged_vol.iterrows()]
+                fig_main.add_trace(go.Bar(
+                    x=merged_vol.index, y=merged_vol['volume'], marker_color=colors, name='Volume'
+                ), row=2, col=1)
 
             # VWAP
             if show_vwap and not vwap_series.empty:
-                fig_main.add_trace(go.Scatter(x=vwap_series.index, y=vwap_series, line=dict(color='#ff9f43', width=2), name='VWAP'))
+                fig_main.add_trace(go.Scatter(x=vwap_series.index, y=vwap_series, line=dict(color='#ff9f43', width=2), name='VWAP'), row=1, col=1)
 
             # Parabolic SAR
             if show_sar and not sar_series.empty:
-                fig_main.add_trace(go.Scatter(x=sar_series.index, y=sar_series, mode='markers', marker=dict(color='white', size=4, symbol='cross'), name='Parabolic SAR'))
+                fig_main.add_trace(go.Scatter(x=sar_series.index, y=sar_series, mode='markers', marker=dict(color='white', size=4, symbol='cross'), name='Parabolic SAR'), row=1, col=1)
 
             # Bollinger Bands
             if not bb_df.empty:
-                fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Upper'], line=dict(color='#bd93f9', width=1), name='BB Upper'))
-                fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Lower'], line=dict(color='#bd93f9', width=1), name='BB Lower', fill='tonexty', fillcolor='rgba(189, 147, 249, 0.1)'))
-                fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['SMA'], line=dict(color='#FFD700', width=1), name='BB SMA 20'))
+                fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Upper'], line=dict(color='#bd93f9', width=1), name='BB Upper'), row=1, col=1)
+                fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['B_Lower'], line=dict(color='#bd93f9', width=1), name='BB Lower', fill='tonexty', fillcolor='rgba(189, 147, 249, 0.1)'), row=1, col=1)
+                fig_main.add_trace(go.Scatter(x=bb_df.index, y=bb_df['SMA'], line=dict(color='#FFD700', width=1), name='BB SMA 20'), row=1, col=1)
 
             # Ichimoku
             if not ichi_df.empty:
-                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['SpanA'], line=dict(width=0), showlegend=False, name='Span A'))
-                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['SpanB'], line=dict(width=0), fill='tonexty', fillcolor='rgba(0, 255, 255, 0.1)', name='Ichimoku Cloud'))
-                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['Tenkan'], line=dict(color='#00FFFF', width=1), name='Tenkan'))
-                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['Kijun'], line=dict(color='#FF4500', width=1), name='Kijun'))
+                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['SpanA'], line=dict(width=0), showlegend=False, name='Span A'), row=1, col=1)
+                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['SpanB'], line=dict(width=0), fill='tonexty', fillcolor='rgba(0, 255, 255, 0.1)', name='Ichimoku Cloud'), row=1, col=1)
+                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['Tenkan'], line=dict(color='#00FFFF', width=1), name='Tenkan'), row=1, col=1)
+                fig_main.add_trace(go.Scatter(x=ichi_df.index, y=ichi_df['Kijun'], line=dict(color='#FF4500', width=1), name='Kijun'), row=1, col=1)
 
             # SMA Ribbon
             if show_sma:
                 colors = ['#FF0000', '#FFA500', '#FFFF00', '#008000']
                 for i, period in enumerate([20, 50, 100, 200]):
                     sma = ohlc_df['close'].rolling(window=period).mean()
-                    fig_main.add_trace(go.Scatter(x=ohlc_df.index, y=sma, line=dict(color=colors[i], width=1), name=f'SMA {period}'))
+                    fig_main.add_trace(go.Scatter(x=ohlc_df.index, y=sma, line=dict(color=colors[i], width=1), name=f'SMA {period}'), row=1, col=1)
 
             # Fibonacci
             if show_fib:
                 for label, val in fib_levels.items():
-                    fig_main.add_hline(y=val, line_dash="dot", line_color="gray", annotation_text=label)
+                    fig_main.add_hline(y=val, line_dash="dot", line_color="gray", annotation_text=label, row=1, col=1)
 
             # Annotations (Max/Min)
             max_idx = ohlc_df['high'].idxmax()
             min_idx = ohlc_df['low'].idxmin()
-            fig_main.add_annotation(x=max_idx, y=ohlc_df.loc[max_idx]['high'], text="Max", showarrow=True, arrowhead=1)
-            fig_main.add_annotation(x=min_idx, y=ohlc_df.loc[min_idx]['low'], text="Min", showarrow=True, arrowhead=1)
+            fig_main.add_annotation(x=max_idx, y=ohlc_df.loc[max_idx]['high'], text="Max", showarrow=True, arrowhead=1, row=1, col=1)
+            fig_main.add_annotation(x=min_idx, y=ohlc_df.loc[min_idx]['low'], text="Min", showarrow=True, arrowhead=1, row=1, col=1)
 
             fig_main.update_layout(title="Price Action", template="plotly_dark", xaxis_rangeslider_visible=False, height=600)
             st.plotly_chart(fig_main, use_container_width=True)
@@ -571,12 +620,32 @@ with tab3:
                 with st.spinner("Calculating correlations..."):
                     corr_matrix = calculate_correlation_matrix(comp_ids, days=comp_days)
                     if not corr_matrix.empty:
-                        fig_corr = px.imshow(
-                            corr_matrix,
-                            text_auto=True,
-                            aspect="auto",
-                            color_continuous_scale='RdBu_r',
-                            title=f"Correlation Heatmap ({comp_days} days)"
+                        # Visual Improvement 2: Interactive Heatmap
+
+                        # Replace IDs with names for better display
+                        corr_names = [next(k for k, v in mapping.items() if v == col) for col in corr_matrix.columns]
+                        corr_matrix.columns = corr_names
+                        corr_matrix.index = corr_names
+
+                        fig_corr = go.Figure(data=go.Heatmap(
+                            z=corr_matrix.values,
+                            x=corr_matrix.columns,
+                            y=corr_matrix.index,
+                            colorscale='RdBu',
+                            zmin=-1, zmax=1,
+                            hoverongaps=False,
+                            text=np.round(corr_matrix.values, 2),
+                            texttemplate="%{text}",
+                            textfont={"size": 12}
+                        ))
+
+                        fig_corr.update_layout(
+                            title=f"Correlation Heatmap ({comp_days} days)",
+                            xaxis_title="Assets",
+                            yaxis_title="Assets",
+                            template="plotly_dark",
+                            width=700,
+                            height=600
                         )
                         fig_corr.update_layout(template="plotly_dark")
                         st.plotly_chart(fig_corr, use_container_width=True)
@@ -686,6 +755,59 @@ with tab5:
             col_p4.metric("Diversity Score", f"{div_score:.1f}/100")
         else:
             col_p4.metric("Diversity Score", "N/A")
+
+        # Technical Improvement 2: Advanced Portfolio Risk Metrics
+        if len(p_ids) > 0 and total_val > 0:
+            with st.spinner("Calculating Risk Metrics..."):
+                port_hist = get_batch_historical_prices(p_ids, days=180)
+                if not port_hist.empty:
+                    # Calculate daily portfolio returns based on current weights
+                    current_weights = df_port.set_index('Coin')['Value'] / total_val
+                    # Map from ids to names since history uses ids as columns
+                    # Actually get_batch returns ids as columns
+                    port_hist.columns = [next(k for k, v in mapping.items() if v == col) for col in port_hist.columns]
+
+                    # Align weights
+                    aligned_weights = current_weights.reindex(port_hist.columns).fillna(0)
+
+                    # Daily returns for each asset
+                    daily_returns = port_hist.pct_change().dropna()
+
+                    # Portfolio daily return
+                    port_daily_return = (daily_returns * aligned_weights).sum(axis=1)
+
+                    # Risk-free rate (assumed 2% annual)
+                    rf_daily = 0.02 / 365
+
+                    # Excess returns
+                    excess_returns = port_daily_return - rf_daily
+
+                    # Sharpe Ratio (Annualized)
+                    volatility = port_daily_return.std()
+                    sharpe = (excess_returns.mean() / volatility) * np.sqrt(365) if volatility > 0 else 0
+
+                    # Sortino Ratio (Downside volatility only)
+                    downside_returns = excess_returns[excess_returns < 0]
+                    downside_vol = downside_returns.std()
+                    sortino = (excess_returns.mean() / downside_vol) * np.sqrt(365) if downside_vol > 0 else 0
+
+                    # Max Drawdown
+                    cumulative_returns = (1 + port_daily_return).cumprod()
+                    running_max = cumulative_returns.cummax()
+                    drawdown = (cumulative_returns - running_max) / running_max
+                    max_drawdown = drawdown.min() * 100
+
+                    st.markdown("### 🛡️ Risk Analysis (180-Day)")
+                    r_col1, r_col2, r_col3 = st.columns(3)
+                    r_col1.metric("Sharpe Ratio", f"{sharpe:.2f}", help="Risk-adjusted return. >1 is good, >2 is excellent.")
+                    r_col2.metric("Sortino Ratio", f"{sortino:.2f}", help="Penalizes only downside volatility. >1 is good.")
+                    r_col3.metric("Max Drawdown", f"{max_drawdown:.2f}%", help="Largest single drop from peak to trough.")
+
+                    # Optional: Plot Drawdown
+                    fig_dd = go.Figure()
+                    fig_dd.add_trace(go.Scatter(x=drawdown.index, y=drawdown * 100, fill='tozeroy', line=dict(color='red')))
+                    fig_dd.update_layout(title="Historical Drawdown (%)", template="plotly_dark", height=200, margin=dict(t=30, b=0))
+                    st.plotly_chart(fig_dd, use_container_width=True)
 
         st.dataframe(df_port.style.format({'Price': "${:.2f}", 'Value': "${:.2f}", 'PnL ($)': "${:.2f}", 'PnL (%)': "{:.2f}%"}))
 
@@ -840,7 +962,7 @@ with tab6:
 with tab7:
     st.subheader("🧮 Crypto Calculators")
 
-    c_tab1, c_tab2, c_tab3, c_tab4, c_tab5 = st.tabs(["If I Invested...", "Moon Math", "Risk/Reward", "DCA Time Machine", "Impermanent Loss"])
+    c_tab1, c_tab2, c_tab3, c_tab4, c_tab5, c_tab6 = st.tabs(["If I Invested...", "Moon Math", "Risk/Reward", "DCA Time Machine", "Impermanent Loss", "Options Pricing"])
 
     with c_tab1:
         st.write("#### 💸 If I Invested...")
@@ -964,6 +1086,40 @@ with tab7:
         il_val = calculate_impermanent_loss(price_a, price_b)
         st.metric("Impermanent Loss", f"{il_val:.2f}%", delta=f"{il_val:.2f}%")
         st.info("Note: This assumes a 50/50 Liquidity Pool.")
+
+    with c_tab6:
+        st.write("#### 📈 Black-Scholes Options Pricing")
+        st.write("Estimate fair value for European Call and Put options.")
+
+        # Pre-fill S with current price if available
+        current_p = get_current_price(coin_id).get(coin_id, {}).get('usd', 0)
+
+        col_bs1, col_bs2, col_bs3 = st.columns(3)
+        S = col_bs1.number_input("Current Asset Price (S)", value=float(current_p) if current_p else 1000.0, min_value=0.0)
+        K = col_bs2.number_input("Strike Price (K)", value=float(current_p) * 1.1 if current_p else 1100.0, min_value=0.0)
+        T_days = col_bs3.number_input("Days to Expiration", value=30, min_value=1)
+
+        col_bs4, col_bs5, col_bs6 = st.columns(3)
+        r = col_bs4.number_input("Risk-Free Rate (Annual %)", value=4.5) / 100
+
+        # Pre-fill Volatility from history if possible
+        vol_est = 50.0 # Default 50%
+        hist = get_historical_prices(coin_id, days=90)
+        if not hist.empty:
+            vol_est = hist['close'].pct_change().std() * np.sqrt(365) * 100
+
+        sigma = col_bs5.number_input("Implied Volatility (Annual %)", value=float(vol_est)) / 100
+
+        if st.button("Calculate Option Price"):
+            T_years = T_days / 365.0
+            call, put = calculate_black_scholes(S, K, T_years, r, sigma)
+
+            # Interactive visualization of pricing surface
+            bs_c1, bs_c2 = st.columns(2)
+            bs_c1.metric("Call Option Fair Value", f"${call:.2f}")
+            bs_c2.metric("Put Option Fair Value", f"${put:.2f}")
+
+            st.info("Note: Crypto options often have American exercise styles and extreme jump-risk, making Black-Scholes an approximation.")
 
 
 # --- TAB 8: STATS ---
@@ -1117,6 +1273,61 @@ with tab9:
                 else:
                     st.info("No open orders.")
 
+            # Order Book Analysis
+            st.markdown("---")
+            st.write("#### 📊 Order Book Depth Analysis")
+            if st.button("Analyze Depth", key="ob_btn"):
+                with st.spinner(f"Fetching L2 Order Book for {t_symbol}..."):
+                    ob, err = st.session_state.exchange_client.get_order_book(t_symbol, limit=100)
+                    if ob:
+                        bids = ob.get('bids', [])
+                        asks = ob.get('asks', [])
+
+                        if bids and asks:
+                            bid_df = pd.DataFrame(bids, columns=['Price', 'Volume'])
+                            ask_df = pd.DataFrame(asks, columns=['Price', 'Volume'])
+
+                            bid_df['Cumulative_Volume'] = bid_df['Volume'].cumsum()
+                            ask_df['Cumulative_Volume'] = ask_df['Volume'].cumsum()
+
+                            total_bid_vol = bid_df['Volume'].sum()
+                            total_ask_vol = ask_df['Volume'].sum()
+                            imbalance = total_bid_vol / (total_bid_vol + total_ask_vol)
+
+                            ob_col1, ob_col2, ob_col3 = st.columns(3)
+                            ob_col1.metric("Bid Imbalance", f"{imbalance*100:.2f}%")
+                            ob_col2.metric("Total Bid Depth", f"{total_bid_vol:,.2f}")
+                            ob_col3.metric("Total Ask Depth", f"{total_ask_vol:,.2f}")
+
+                            # Visual Improvement 4: Order Book Depth Chart Visualization
+                            fig_ob = go.Figure()
+                            # Sort bids descending, asks ascending to create proper depth shape
+                            bid_df_plot = bid_df.sort_values('Price', ascending=False)
+                            bid_df_plot['Cumulative_Volume'] = bid_df_plot['Volume'].cumsum()
+                            ask_df_plot = ask_df.sort_values('Price', ascending=True)
+                            ask_df_plot['Cumulative_Volume'] = ask_df_plot['Volume'].cumsum()
+
+                            fig_ob.add_trace(go.Scatter(x=bid_df_plot['Price'], y=bid_df_plot['Cumulative_Volume'], name='Bids', fill='tozeroy', fillcolor='rgba(0,255,0,0.3)', line=dict(color='#00FF00', width=2), hoverinfo='x+y', mode='lines'))
+                            fig_ob.add_trace(go.Scatter(x=ask_df_plot['Price'], y=ask_df_plot['Cumulative_Volume'], name='Asks', fill='tozeroy', fillcolor='rgba(255,0,0,0.3)', line=dict(color='#FF0000', width=2), hoverinfo='x+y', mode='lines'))
+
+                            current_price_mid = (bid_df['Price'].max() + ask_df['Price'].min()) / 2
+                            fig_ob.add_vline(x=current_price_mid, line_dash="dash", line_color="gray", annotation_text="Mid Price")
+
+                            fig_ob.update_layout(
+                                title=f"L2 Market Depth for {t_symbol}",
+                                xaxis_title="Price (USD)",
+                                yaxis_title="Cumulative Depth",
+                                template="plotly_dark",
+                                hovermode="x unified",
+                                height=400,
+                                margin=dict(l=20, r=20, t=40, b=20)
+                            )
+                            st.plotly_chart(fig_ob, use_container_width=True)
+                        else:
+                            st.warning("Order book data is empty.")
+                    else:
+                        st.error(err)
+
     # === Freqtrade Integration ===
     elif con_mode == "🤖 Freqtrade":
         st.write("### 🤖 Freqtrade Bot Controller")
@@ -1203,18 +1414,17 @@ with tab10:
     <div style='text-align: center;'>
         <h2>🧙 The Oracle Speaks 🧙</h2>
         <p style='font-size: 1.2rem; font-family: Cinzel, serif; color: #00FFFF;'>
-            Welcome to the upgraded Crypto Fortune Teller v3.0!
+            Welcome to the upgraded Crypto Fortune Teller v3.5!
         </p>
     </div>
 
-    ### 🌟 New Features & Enhancements
-    1.  **Grand Ensemble Forecasting:** Combine Prophet (3 variants), LSTM, ARIMA, SARIMA, and Random Forest models.
-    2.  **Advanced Indicators:** Added ADX/DMI and CCI for trend and momentum analysis.
-    3.  **Market Intelligence:** View Top Gainers and Losers instantly.
-    4.  **Impermanent Loss Calculator:** Estimate risks for liquidity provision.
-    5.  **Portfolio Analytics:** New Diversity Score to track your asset distribution.
-    6.  **Enhanced Backtesting:** New strategies including Bollinger Band Squeeze and MACD Crossover.
-    7.  **Psychedelic Professional UI:** A completely revamped, immersive visual experience.
+    ### 🌟 New Features & Enhancements (v3.5)
+    1.  **Monte Carlo Forecasting:** Geometric Brownian Motion simulations.
+    2.  **Order Book Depth Analysis:** Real-time L2 Depth chart visualization.
+    3.  **Black-Scholes Options Calculator:** Estimate fair value for calls/puts.
+    4.  **Advanced Portfolio Risk Metrics:** Sharpe, Sortino, and Drawdown analytics.
+    5.  **Prophet Auto-Tuning:** Automated grid-search optimization.
+    6.  **Visual Overhaul:** Glassmorphism UI, Gauge Charts, Animated Loaders, and Interactive Heatmaps.
 
     ---
     *Disclaimer: This tool is for entertainment and educational purposes only. The future is always in flux.*
