@@ -48,7 +48,11 @@ from modules.cryptop_crypto_fortune_teller_helper import (
     calculate_adx,
     calculate_cci,
     get_top_gainers_losers,
-    calculate_impermanent_loss
+    calculate_impermanent_loss,
+    get_defi_yields,
+    get_whale_alerts,
+    get_crypto_news_sentiment,
+    get_tokenomics_data
 )
 from modules.utils import validate_url
 from modules.cryptop_crypto_fortune_teller_models import (
@@ -247,7 +251,7 @@ with st.sidebar:
     st.info("Note: Prediction models are for educational purposes only. Not financial advice.")
 
 # 5) Main Content Tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
     "🔮 Forecast",
     "📊 Analysis",
     "⚖️ Compare",
@@ -257,6 +261,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
     "🧮 Calculators",
     "🔧 Stats",
     "🔌 Connect",
+    "💎 Alpha Insights",
     "🧙 About"
 ])
 
@@ -1408,8 +1413,101 @@ with tab9:
                 elif wl_err:
                     st.error(wl_err)
 
-# --- TAB 10: ABOUT ---
+
+# --- TAB 10: ALPHA INSIGHTS ---
 with tab10:
+    st.subheader("💎 Alpha Insights: Institutional-Grade Market Intelligence")
+    st.write("Leverage 5 world-class features to gain an edge in the crypto market. Track whales, farm DeFi yields, analyze sentiment, exploit arbitrage, and master tokenomics.")
+
+    alpha1, alpha2, alpha3, alpha4, alpha5 = st.tabs([
+        "🐋 Whale Tracker",
+        "🌾 DeFi Yields",
+        "📰 Sentiment NLP",
+        "💱 Arbitrage Matrix",
+        "📉 Tokenomics"
+    ])
+
+    with alpha1:
+        st.write("### 🐋 On-Chain Whale Tracker & Anomaly Detection")
+        st.write("Detects anomalous volume spikes indicative of institutional or whale accumulation/distribution.")
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            whale_coin = st.text_input("Asset ID", value="bitcoin", key="whale_coin")
+        if st.button("Scan for Whales", key="whale_btn"):
+            with st.spinner(f"Scanning deep liquidity pools for {whale_coin}..."):
+                whale_df = get_whale_alerts(whale_coin)
+                if not whale_df.empty:
+                    st.success(f"Detected {len(whale_df)} recent anomalous volume events!")
+                    st.dataframe(whale_df, use_container_width=True)
+                else:
+                    st.info("No significant whale movements detected recently.")
+
+    with alpha2:
+        st.write("### 🌾 DeFi Yield Farming Scanner")
+        st.write("Real-time APY and TVL from major DeFi protocols to identify the most lucrative yield opportunities (Powered by DefiLlama).")
+        if st.button("Scan DeFi Pools", key="defi_btn"):
+            with st.spinner("Fetching global DeFi yields..."):
+                yields_df = get_defi_yields()
+                if not yields_df.empty:
+                    st.dataframe(yields_df, use_container_width=True)
+                else:
+                    st.error("Failed to retrieve DeFi yields.")
+
+    with alpha3:
+        st.write("### 📰 AI Sentiment & News NLP Analysis")
+        st.write("Aggregates recent crypto news and performs Natural Language Processing (NLP) sentiment analysis to gauge market mood.")
+        if st.button("Analyze News Sentiment", key="news_btn"):
+            with st.spinner("Analyzing news headlines..."):
+                news_df = get_crypto_news_sentiment()
+                if not news_df.empty:
+                    st.dataframe(
+                        news_df.style.map(
+                            lambda x: 'color: lime' if 'Bullish' in str(x) else ('color: red' if 'Bearish' in str(x) else 'color: gray'),
+                            subset=['Sentiment']
+                        ),
+                        use_container_width=True
+                    )
+                else:
+                    st.error("Failed to analyze news sentiment.")
+
+    with alpha4:
+        st.write("### 💱 Advanced Arbitrage Matrix & Liquidity Heatmap")
+        st.write("Visualizes cross-exchange spread matrices to highlight high-frequency trading arbitrage opportunities.")
+        col_arb1, col_arb2 = st.columns([1, 4])
+        with col_arb1:
+            arb_pair = st.text_input("Trading Pair", value="BTC/USDT", key="arb_pair")
+        if st.button("Scan Exchanges", key="arb_btn"):
+            with st.spinner(f"Scanning order books for {arb_pair}..."):
+                # Call it from the helper module (it is defined there)
+                arb_df = get_exchange_arbitrage(arb_pair)
+                if not arb_df.empty:
+                    st.dataframe(
+                        arb_df.style.map(
+                            lambda x: 'color: lime; font-weight: bold' if 'Yes' in str(x) else '',
+                            subset=['Arbitrage']
+                        ),
+                        use_container_width=True
+                    )
+                else:
+                    st.error("Failed to retrieve exchange data or pair not found.")
+
+    with alpha5:
+        st.write("### 📉 Tokenomics & Unlocks Dashboard")
+        st.write("Tracks circulating supply, max supply constraints, and emission metrics to predict supply-side pressure.")
+        col_tok1, col_tok2 = st.columns([1, 4])
+        with col_tok1:
+            tok_coin = st.text_input("Asset ID", value="solana", key="tok_coin")
+        if st.button("Analyze Tokenomics", key="tok_btn"):
+            with st.spinner(f"Analyzing {tok_coin} tokenomics..."):
+                tok_df = get_tokenomics_data(tok_coin)
+                if not tok_df.empty:
+                    st.table(tok_df)
+                else:
+                    st.error("Failed to retrieve tokenomics data.")
+
+# --- TAB 11: ABOUT ---
+
+with tab11:
     st.markdown("""
     <div style='text-align: center;'>
         <h2>🧙 The Oracle Speaks 🧙</h2>

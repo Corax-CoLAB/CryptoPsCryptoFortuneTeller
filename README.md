@@ -96,6 +96,18 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 </ul>
 </details>
 
+<details>
+<summary><b><h3 style="display:inline-block; cursor:pointer;">💎 Alpha Insights: Institutional-Grade Intelligence</h3></b></summary>
+<br>
+<ul>
+  <li><b>🐋 On-Chain Whale Tracker & Anomaly Detection:</b> Detect anomalous volume spikes indicative of institutional or whale accumulation/distribution.</li>
+  <li><b>🌾 DeFi Yield Farming Scanner:</b> Real-time APY and TVL from major DeFi protocols to identify the most lucrative yield opportunities (Powered by DefiLlama).</li>
+  <li><b>📰 AI Sentiment & News NLP Analysis:</b> Aggregates recent crypto news and performs Natural Language Processing (NLP) sentiment analysis to gauge market mood.</li>
+  <li><b>💱 Advanced Arbitrage Matrix & Liquidity Heatmap:</b> Visualizes cross-exchange spread matrices to highlight high-frequency trading arbitrage opportunities across 7+ top-tier exchanges.</li>
+  <li><b>📉 Tokenomics & Unlocks Dashboard:</b> Tracks circulating supply, max supply constraints, and emission metrics to predict supply-side pressure.</li>
+</ul>
+</details>
+
 <br>
 
 <div align="center">
@@ -212,6 +224,18 @@ CryptoPsCryptoFortuneTeller/
 ├── health_check.py                # Environment & API validation
 └── requirements.txt               # Pinned dependencies (e.g. numpy<2.0.0)
 ```
+</details>
+
+<details>
+<summary><b><h3 style="display:inline-block; cursor:pointer;">💎 Alpha Insights: Institutional-Grade Intelligence</h3></b></summary>
+<br>
+<ul>
+  <li><b>🐋 On-Chain Whale Tracker & Anomaly Detection:</b> Detect anomalous volume spikes indicative of institutional or whale accumulation/distribution.</li>
+  <li><b>🌾 DeFi Yield Farming Scanner:</b> Real-time APY and TVL from major DeFi protocols to identify the most lucrative yield opportunities (Powered by DefiLlama).</li>
+  <li><b>📰 AI Sentiment & News NLP Analysis:</b> Aggregates recent crypto news and performs Natural Language Processing (NLP) sentiment analysis to gauge market mood.</li>
+  <li><b>💱 Advanced Arbitrage Matrix & Liquidity Heatmap:</b> Visualizes cross-exchange spread matrices to highlight high-frequency trading arbitrage opportunities across 7+ top-tier exchanges.</li>
+  <li><b>📉 Tokenomics & Unlocks Dashboard:</b> Tracks circulating supply, max supply constraints, and emission metrics to predict supply-side pressure.</li>
+</ul>
 </details>
 
 <br>
