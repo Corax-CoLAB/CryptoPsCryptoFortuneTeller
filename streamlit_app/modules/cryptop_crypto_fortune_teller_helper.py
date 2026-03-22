@@ -12,6 +12,7 @@ import ccxt
 
 # Initialize CoinGecko client (public demo API)
 cg = CoinGeckoAPI()
+cg.request_timeout = 20
 cg.request_timeout = 20  # Sentinel: Enforce timeout to prevent hanging
 
 def get_session():
@@ -1068,9 +1069,9 @@ def detect_candlestick_patterns(df):
 @st.cache_data(ttl=60)
 def get_exchange_arbitrage(symbol_str):
     """
-    Feature 2: Arbitrage Scanner
-    Fetches prices for a symbol (e.g., 'BTC/USDT') across major exchanges.
-    Returns DataFrame with Exchange, Price, and Spread.
+    Advanced Arbitrage Matrix & Liquidity Heatmap
+    Fetches prices for a symbol across major exchanges.
+    Returns a complex DataFrame showing buy/sell spreads and potential alpha.
     """
     exchanges = ['binance', 'kraken', 'coinbase', 'kucoin', 'okx', 'gate', 'bybit']
     data = []
@@ -1082,29 +1083,43 @@ def get_exchange_arbitrage(symbol_str):
 
     def fetch_ticker(ex_name):
         try:
+            import ccxt
             exchange_class = getattr(ccxt, ex_name)
-            exchange = exchange_class()
+            exchange = exchange_class({'enableRateLimit': True, 'timeout': 5000})
             ticker = exchange.fetch_ticker(symbol)
-            return {'Exchange': ex_name.capitalize(), 'Price': ticker['last']}
+            return {
+                'Exchange': ex_name.capitalize(),
+                'Price': ticker.get('last'),
+                'Bid': ticker.get('bid'),
+                'Ask': ticker.get('ask'),
+                'Volume 24h': ticker.get('baseVolume', 0)
+            }
         except Exception:
             return None
 
-    # Use ThreadPoolExecutor for speed
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        results = executor.map(fetch_ticker, exchanges)
-        for res in results:
-            if res:
-                data.append(res)
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(exchanges)) as executor:
+        results = list(executor.map(fetch_ticker, exchanges))
+
+    data = [r for r in results if r and r.get('Price') is not None]
 
     if not data:
         return pd.DataFrame()
 
     df = pd.DataFrame(data)
-    if not df.empty:
-        min_price = df['Price'].min()
-        df['Spread %'] = ((df['Price'] - min_price) / min_price) * 100
-        df = df.sort_values(by='Price', ascending=False)
 
+    # Fill missing Bid/Ask with Price
+    df['Bid'] = df['Bid'].fillna(df['Price'])
+    df['Ask'] = df['Ask'].fillna(df['Price'])
+
+    min_ask = df['Ask'].min()
+    max_bid = df['Bid'].max()
+
+    df['Spread %'] = ((df['Price'] - df['Price'].min()) / df['Price'].min() * 100).round(2)
+    df['Alpha Potential'] = ((df['Bid'] - min_ask) / min_ask * 100).round(2)
+    df['Arbitrage'] = df['Alpha Potential'].apply(lambda x: '🔥 Yes' if x > 0 else 'No')
+
+    df = df.sort_values(by='Price').reset_index(drop=True)
     return df
 
 @st.cache_data(ttl=3600)
@@ -1246,3 +1261,112 @@ def calculate_black_scholes(S, K, T, r, sigma):
     put_price = K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
 
     return call_price, put_price
+import requests
+import pandas as pd
+import streamlit as st
+import datetime
+from textblob import TextBlob
+from pycoingecko import CoinGeckoAPI
+
+cg = CoinGeckoAPI()
+cg.request_timeout = 20
+
+@st.cache_data(ttl=3600)
+def get_defi_yields(limit=20):
+    try:
+        r = requests.get('https://yields.llama.fi/pools', timeout=10)
+        r.raise_for_status()
+        data = r.json().get('data', [])
+        df = pd.DataFrame(data)
+        if not df.empty:
+            df = df[['chain', 'project', 'symbol', 'tvlUsd', 'apy', 'ilRisk']]
+            df = df.sort_values(by='tvlUsd', ascending=False).head(limit)
+            df['tvlUsd'] = df['tvlUsd'].apply(lambda x: f"${x:,.0f}")
+            df['apy'] = df['apy'].apply(lambda x: f"{x:.2f}%" if pd.notnull(x) else "N/A")
+            return df
+    except Exception as e:
+        import logging
+        logging.error(f"Error fetching DeFi yields: {e}", exc_info=True)
+    return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def get_whale_alerts(coin_id="bitcoin"):
+    try:
+        # Simulate whale movements using CoinGecko large volume shifts if an API isn't freely available
+        res = cg.get_coin_market_chart_by_id(id=coin_id, vs_currency='usd', days='1')
+        vols = res['total_volumes']
+        df = pd.DataFrame(vols, columns=['timestamp', 'volume'])
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+
+        # Calculate moving average and find spikes
+        df['vol_ma'] = df['volume'].rolling(window=12).mean() # roughly 1 hr
+        df['is_whale'] = df['volume'] > (df['vol_ma'] * 2.5) # 250% spike
+
+        whales = df[df['is_whale']].tail(10).copy()
+        if not whales.empty:
+            whales['volume'] = whales['volume'].apply(lambda x: f"${x:,.0f}")
+            return whales[['timestamp', 'volume']].sort_values(by='timestamp', ascending=False)
+    except Exception as e:
+        import logging
+        logging.error(f"Error fetching whale alerts: {e}", exc_info=True)
+    return pd.DataFrame()
+
+@st.cache_data(ttl=1800)
+def get_crypto_news_sentiment(limit=10):
+    try:
+        r = requests.get('https://min-api.cryptocompare.com/data/v2/news/', params={'lang': 'EN'}, timeout=10)
+        r.raise_for_status()
+        data = r.json().get('Data', [])[:limit]
+
+        news_data = []
+        for item in data:
+            title = item.get('title', '')
+            body = item.get('body', '')
+            url = item.get('url', '')
+            source = item.get('source_info', {}).get('name', 'Unknown')
+
+            # NLP Sentiment
+            blob = TextBlob(title + " " + body)
+            polarity = blob.sentiment.polarity
+
+            sentiment_label = "Neutral 😐"
+            if polarity > 0.2:
+                sentiment_label = "Bullish 🚀"
+            elif polarity < -0.2:
+                sentiment_label = "Bearish 📉"
+
+            news_data.append({
+                'Source': source,
+                'Title': title,
+                'Sentiment': sentiment_label,
+                'Score': round(polarity, 2),
+                'URL': url
+            })
+
+        return pd.DataFrame(news_data)
+    except Exception as e:
+        import logging
+        logging.error(f"Error fetching news sentiment: {e}", exc_info=True)
+    return pd.DataFrame()
+
+@st.cache_data(ttl=3600)
+def get_tokenomics_data(coin_id):
+    try:
+        data = cg.get_coin_by_id(id=coin_id, localization=False, tickers=False, market_data=True, community_data=False, developer_data=False, sparkline=False)
+        md = data.get('market_data', {})
+
+        circulating = md.get('circulating_supply', 0)
+        total = md.get('total_supply', 0)
+        max_supply = md.get('max_supply', 0)
+
+        tokenomics = {
+            'Circulating Supply': f"{circulating:,.0f}" if circulating else "N/A",
+            'Total Supply': f"{total:,.0f}" if total else "N/A",
+            'Max Supply': f"{max_supply:,.0f}" if max_supply else "Unlimited",
+            'Supply Inflation Ratio': f"{(circulating / total * 100):.2f}%" if circulating and total else "N/A"
+        }
+        return pd.DataFrame(list(tokenomics.items()), columns=['Metric', 'Value'])
+    except Exception as e:
+        import logging
+        logging.error(f"Error fetching tokenomics: {e}", exc_info=True)
+    return pd.DataFrame()
