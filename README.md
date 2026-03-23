@@ -254,6 +254,12 @@ python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
+### Environment Variables
+For local development, copy the `.env.example` file to `.env` and configure your API keys (optional, as the UI currently prompts for credentials).
+```bash
+cp .env.example .env
+```
+
 ### 2. Install Dependencies
 ```bash
 pip install -r requirements.txt
