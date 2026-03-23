@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="streamlit_app/assets/logo.png" alt="Crypto P's Crypto Fortune Teller Logo" width="300" style="border-radius: 50%; box-shadow: 0 0 20px #A020F0; margin-bottom: 20px;">
+<img src="streamlit_app/assets/logo.png" alt="Crypto P's Fortune Teller Logo" width="300" style="border-radius: 50%; box-shadow: 0 0 20px #A020F0; margin-bottom: 20px;">
 
-# 🔮 <span style="color:#A020F0; text-shadow: 0 0 5px #A020F0, 0 0 10px #A020F0, 0 0 20px #FF00FF, 0 0 40px #FF00FF;">Crypto P's Crypto Fortune Teller</span> 🔮
+# 🔮 <span style="color:#A020F0; text-shadow: 0 0 5px #A020F0, 0 0 10px #A020F0, 0 0 20px #FF00FF, 0 0 40px #FF00FF;">Crypto P's Fortune Teller</span> 🔮
 
 **A Psychedelic Cosmic Circus of AI-Powered Crypto Analytics & Forecasting**
 
@@ -12,7 +12,7 @@
 [![Streamlit App](https://img.shields.io/badge/Streamlit-App-FF4B4B.svg?style=for-the-badge&logo=streamlit&logoColor=white)](https://cryptop.coraxcolab.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Security: Checked](https://img.shields.io/badge/Security-AST%20%26%20Regex%20Checked-brightgreen.svg?style=for-the-badge)](https://github.com/PelleNybe)
-[![CI](https://github.com/PelleNybe/CryptoFortuneTeller/actions/workflows/ci.yml/badge.svg?style=for-the-badge)](https://github.com/PelleNybe/CryptoFortuneTeller/actions/workflows/ci.yml)
+[![CI](https://github.com/PelleNybe/CryptoPsFortuneTeller/actions/workflows/ci.yml/badge.svg?style=for-the-badge)](https://github.com/PelleNybe/CryptoPsFortuneTeller/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](http://makeapullrequest.com)
 
 <br>
@@ -35,7 +35,7 @@
 
 ## 🌌 Discover the Future of Trading
 
-Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly designed Streamlit application that empowers you to peer into the misty future of cryptocurrency prices. By leveraging advanced machine learning models (Prophet, LSTM, ARIMA, Random Forest) and real-time data from CoinGecko, CCXT Exchanges, and Freqtrade, this tool provides price forecasts, deep technical analysis, strategy backtesting, and comprehensive market insights.
+Welcome to **Crypto P's Fortune Teller**, an interactive, stunningly designed Streamlit application that empowers you to peer into the misty future of cryptocurrency prices. By leveraging advanced machine learning models (Prophet, LSTM, ARIMA, Random Forest) and real-time data from CoinGecko, CCXT Exchanges, and Freqtrade, this tool provides price forecasts, deep technical analysis, strategy backtesting, and comprehensive market insights.
 
 <br>
 
@@ -207,7 +207,7 @@ We take security seriously. This application includes:
 <br>
 
 ```text
-CryptoPsCryptoFortuneTeller/
+CryptoPsFortuneTeller/
 ├── streamlit_app/
 │   ├── assets/
 │   │   ├── logo.png               # App logo
@@ -248,8 +248,8 @@ CryptoPsCryptoFortuneTeller/
 
 ### 1. Clone & Setup
 ```bash
-git clone https://github.com/PelleNybe/CryptoPsCryptoFortuneTeller.git
-cd CryptoPsCryptoFortuneTeller
+git clone https://github.com/PelleNybe/CryptoPsFortuneTeller.git
+cd CryptoPsFortuneTeller
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```

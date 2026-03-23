@@ -58,7 +58,7 @@ class TestFnGSecurity(unittest.TestCase):
         if 'User-Agent' not in headers:
              self.fail("Security Enhancement Required: Missing User-Agent header in requests.get call.")
 
-        self.assertIn('CryptoFortuneTeller', headers['User-Agent'], "User-Agent should be descriptive.")
+        self.assertIn('CryptoPsFortuneTeller', headers['User-Agent'], "User-Agent should be descriptive.")
 
     @patch('modules.cryptop_crypto_fortune_teller_helper.req_session.get')
     def test_fng_timeout_consistency(self, mock_get):

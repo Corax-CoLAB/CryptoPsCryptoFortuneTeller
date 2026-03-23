@@ -403,7 +403,7 @@ def get_fear_and_greed_index():
     url = "https://api.alternative.me/fng/"
     try:
         # Sentinel: Added User-Agent, extended timeout, and status check
-        headers = {'User-Agent': 'CryptoFortuneTeller/1.0'}
+        headers = {'User-Agent': 'CryptoPsFortuneTeller/1.0'}
         r = req_session.get(url, headers=headers, timeout=20)
         r.raise_for_status()
         data = r.json()

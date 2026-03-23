@@ -1,6 +1,6 @@
-# Contributing to Crypto P's Crypto Fortune Teller
+# Contributing to Crypto P's Fortune Teller
 
-First off, thank you for considering contributing to Crypto P's Crypto Fortune Teller! It's people like you that make this tool such a great resource.
+First off, thank you for considering contributing to Crypto P's Fortune Teller! It's people like you that make this tool such a great resource.
 
 ## How Can I Contribute?
 
