@@ -1,6 +1,6 @@
 import re
 
-with open("streamlit_app/modules/cryptop_crypto_fortune_teller_helper.py", "r") as f:
+with open("streamlit_app/modules/cryptop_crypto_circus_helper.py", "r") as f:
     content = f.read()
 
 # Add VWAP logic to backtest
@@ -22,11 +22,11 @@ vwap_strategy = """    elif strategy_type == 'VWAP Reversion':
 if "'VWAP Reversion'" not in content:
     content = content.replace("    elif strategy_type == 'MACD Crossover':", vwap_strategy + "\n    elif strategy_type == 'MACD Crossover':")
 
-with open("streamlit_app/modules/cryptop_crypto_fortune_teller_helper.py", "w") as f:
+with open("streamlit_app/modules/cryptop_crypto_circus_helper.py", "w") as f:
     f.write(content)
 
 # Update Main App UI
-with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "r") as f:
+with open("streamlit_app/cryptop_crypto_circus_main.py", "r") as f:
     main_content = f.read()
 
 main_content = main_content.replace(
@@ -34,7 +34,7 @@ main_content = main_content.replace(
     '["SMA Crossover", "RSI Mean Reversion", "Bollinger Band Squeeze", "MACD Crossover", "VWAP Reversion"]'
 )
 
-with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "w") as f:
+with open("streamlit_app/cryptop_crypto_circus_main.py", "w") as f:
     f.write(main_content)
 
 print("VWAP Backtest Strategy Added")

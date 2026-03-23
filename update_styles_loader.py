@@ -1,4 +1,4 @@
-with open("streamlit_app/modules/cryptop_crypto_fortune_teller_styles.py", "r") as f:
+with open("streamlit_app/modules/cryptop_crypto_circus_styles.py", "r") as f:
     content = f.read()
 
 loader_css = """
@@ -29,7 +29,7 @@ loader_css = """
 if "Visual Improvement 2" not in content:
     content = content.replace("</style>", loader_css + "\n</style>")
 
-with open("streamlit_app/modules/cryptop_crypto_fortune_teller_styles.py", "w") as f:
+with open("streamlit_app/modules/cryptop_crypto_circus_styles.py", "w") as f:
     f.write(content)
 
 print("Loaders Updated")

@@ -7,7 +7,7 @@ import os
 # Add streamlit_app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
 
-from modules.cryptop_crypto_fortune_teller_helper import calculate_backtest, calculate_rsi
+from modules.cryptop_crypto_circus_helper import calculate_backtest, calculate_rsi
 
 def test_calculate_backtest_rsi_strategy():
     # Create synthetic data with a known pattern

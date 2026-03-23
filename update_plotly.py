@@ -1,4 +1,4 @@
-with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "r") as f:
+with open("streamlit_app/cryptop_crypto_circus_main.py", "r") as f:
     content = f.read()
 
 # Update RSI Plotly with shaded regions
@@ -24,7 +24,7 @@ new_macd = """                    fig_macd.add_trace(go.Bar(x=macd_df.index, y=m
 
 content = content.replace(old_macd, new_macd)
 
-with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "w") as f:
+with open("streamlit_app/cryptop_crypto_circus_main.py", "w") as f:
     f.write(content)
 
 print("Plotly Advanced Formatting Added")

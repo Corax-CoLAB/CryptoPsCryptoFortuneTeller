@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 # Ensure streamlit_app is in path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from streamlit_app.modules.cryptop_crypto_fortune_teller_helper import (
+from streamlit_app.modules.cryptop_crypto_circus_helper import (
     detect_candlestick_patterns,
     get_exchange_arbitrage,
     calculate_correlation_matrix,
@@ -49,7 +49,7 @@ def test_detect_candlestick_patterns_hammer():
     assert "Hammer (Potential Reversal)" in patterns
 
 # --- Feature 2: Arbitrage ---
-@patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.ccxt')
+@patch('streamlit_app.modules.cryptop_crypto_circus_helper.ccxt')
 def test_get_exchange_arbitrage(mock_ccxt):
     # Mock exchange classes
     mock_ex_binance = MagicMock()
@@ -93,7 +93,7 @@ def test_get_exchange_arbitrage(mock_ccxt):
     assert kraken_row['Spread %'] == 2.0
 
 # --- Feature 3: Correlation ---
-@patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.get_batch_historical_prices')
+@patch('streamlit_app.modules.cryptop_crypto_circus_helper.get_batch_historical_prices')
 def test_calculate_correlation_matrix(mock_batch):
     # Create sample data
     # BTC: Up, Down, Up
@@ -114,7 +114,7 @@ def test_calculate_correlation_matrix(mock_batch):
     assert matrix.loc['bitcoin', 'solana'] < -0.99
 
 # --- Feature 4: DCA ---
-@patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.get_historical_prices')
+@patch('streamlit_app.modules.cryptop_crypto_circus_helper.get_historical_prices')
 def test_calculate_dca_strategy(mock_hist):
     # Price stays flat at $100
     dates = pd.date_range(start='2023-01-01', periods=10, freq='D')
@@ -133,7 +133,7 @@ def test_calculate_dca_strategy(mock_hist):
     assert res['lump_value'] == 1000 # Lump sum at start ($100 price) buys 10 coins too
 
 # --- Feature 5: Whale Sonar ---
-@patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.get_historical_volume')
+@patch('streamlit_app.modules.cryptop_crypto_circus_helper.get_historical_volume')
 def test_detect_volume_anomalies(mock_vol):
     dates = pd.date_range(start='2023-01-01', periods=30, freq='D')
     vols = [1000] * 29 + [5000] # Last day spike 5x

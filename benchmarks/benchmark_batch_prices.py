@@ -9,8 +9,8 @@ from unittest.mock import patch
 # Add parent directory to path to allow importing modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import streamlit_app.modules.cryptop_crypto_fortune_teller_helper as helper
-from streamlit_app.modules.cryptop_crypto_fortune_teller_helper import get_batch_historical_prices
+import streamlit_app.modules.cryptop_crypto_circus_helper as helper
+from streamlit_app.modules.cryptop_crypto_circus_helper import get_batch_historical_prices
 
 # Define a mock for get_historical_prices that sleeps
 def mock_get_historical_prices_slow(coin_id, vs_currency='usd', days=365):
@@ -57,7 +57,7 @@ def run_benchmark():
     print("\n--- Concurrent Execution (ThreadPoolExecutor) ---")
 
     # Patch the function used inside get_batch_historical_prices
-    with patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.get_historical_prices', side_effect=mock_get_historical_prices_slow):
+    with patch('streamlit_app.modules.cryptop_crypto_circus_helper.get_historical_prices', side_effect=mock_get_historical_prices_slow):
         start_time = time.time()
         res_conc = get_batch_historical_prices(coin_ids)
         end_time = time.time()

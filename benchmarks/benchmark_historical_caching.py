@@ -22,7 +22,7 @@ if app_path not in sys.path:
     sys.path.append(app_path)
 
 # Import the helper module
-from modules import cryptop_crypto_fortune_teller_helper as helper
+from modules import cryptop_crypto_circus_helper as helper
 
 class BenchmarkHistoricalCaching(unittest.TestCase):
     def setUp(self):

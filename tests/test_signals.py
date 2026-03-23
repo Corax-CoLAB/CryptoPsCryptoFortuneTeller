@@ -7,7 +7,7 @@ import os
 # Add streamlit_app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
 
-from modules.cryptop_crypto_fortune_teller_helper import check_risk_level, generate_trading_signal
+from modules.cryptop_crypto_circus_helper import check_risk_level, generate_trading_signal
 
 class TestSignals(unittest.TestCase):
 

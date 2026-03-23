@@ -1,4 +1,4 @@
-with open("streamlit_app/modules/cryptop_crypto_fortune_teller_helper.py", "r") as f:
+with open("streamlit_app/modules/cryptop_crypto_circus_helper.py", "r") as f:
     content = f.read()
 
 downcast_func = """
@@ -29,7 +29,7 @@ new_concat = """    # Technical Improvement 3: Optimize memory footprint before 
 
 content = content.replace(old_concat, new_concat)
 
-with open("streamlit_app/modules/cryptop_crypto_fortune_teller_helper.py", "w") as f:
+with open("streamlit_app/modules/cryptop_crypto_circus_helper.py", "w") as f:
     f.write(content)
 
 print("Memory downcasting added")

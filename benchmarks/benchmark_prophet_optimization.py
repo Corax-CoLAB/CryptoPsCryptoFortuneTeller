@@ -47,7 +47,7 @@ class MockCache:
 st.cache_data = MockCache()
 
 # Now import target
-from streamlit_app.modules import cryptop_crypto_fortune_teller_models
+from streamlit_app.modules import cryptop_crypto_circus_models
 
 def generate_data(n=2000):
     dates = pd.date_range(start='2018-01-01', periods=n, freq='D')
@@ -67,14 +67,14 @@ def run_benchmark():
 
     # Run 1: periods=30
     start_time = time.time()
-    res1 = cryptop_crypto_fortune_teller_models._run_prophet_model(df, config, periods=30)
+    res1 = cryptop_crypto_circus_models._run_prophet_model(df, config, periods=30)
     t1 = time.time() - start_time
     print(f"Run 1 (periods=30): {t1:.4f}s")
 
     # Run 2: periods=60
     # In current impl, this changes cache key -> Cache MISS -> Re-run
     start_time = time.time()
-    res2 = cryptop_crypto_fortune_teller_models._run_prophet_model(df, config, periods=60)
+    res2 = cryptop_crypto_circus_models._run_prophet_model(df, config, periods=60)
     t2 = time.time() - start_time
     print(f"Run 2 (periods=60): {t2:.4f}s")
 

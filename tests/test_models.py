@@ -7,7 +7,7 @@ import warnings
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
 
-from modules.cryptop_crypto_fortune_teller_models import (
+from modules.cryptop_crypto_circus_models import (
     forecast_prophet,
     forecast_lstm,
     _run_prophet_model,
@@ -30,7 +30,7 @@ def test_prophet_slicing_logic():
     })
 
     # We mock the FIXED function, not the wrapper
-    with patch('modules.cryptop_crypto_fortune_teller_models._run_prophet_model_fixed') as mock_fixed:
+    with patch('modules.cryptop_crypto_circus_models._run_prophet_model_fixed') as mock_fixed:
         mock_fixed.return_value = df_dummy
 
         # Case 1: periods = 30
@@ -83,7 +83,7 @@ def test_forecast_lstm_short_data():
     assert 'yhat' in forecast.columns
 
 def test_monte_carlo():
-    from modules.cryptop_crypto_fortune_teller_models import forecast_monte_carlo
+    from modules.cryptop_crypto_circus_models import forecast_monte_carlo
     # Create synthetic daily data
     dates = pd.date_range(start='2020-01-01', periods=100, freq='D')
     prices = np.linspace(100, 150, 100) + np.random.normal(0, 5, 100)

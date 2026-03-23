@@ -1,7 +1,7 @@
 import re
 import os
 
-with open("streamlit_app/modules/cryptop_crypto_fortune_teller_helper.py", "r") as f:
+with open("streamlit_app/modules/cryptop_crypto_circus_helper.py", "r") as f:
     content = f.read()
 
 # 1. Add requests.adapters import
@@ -79,7 +79,7 @@ content = re.sub(
     content
 )
 
-with open("streamlit_app/modules/cryptop_crypto_fortune_teller_helper.py", "w") as f:
+with open("streamlit_app/modules/cryptop_crypto_circus_helper.py", "w") as f:
     f.write(content)
 
 print("Helper updated successfully")
