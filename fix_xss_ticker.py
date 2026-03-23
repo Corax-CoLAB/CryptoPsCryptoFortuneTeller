@@ -1,6 +1,6 @@
 import re
 
-with open("streamlit_app/cryptop_crypto_circus_main.py", "r") as f:
+with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "r") as f:
     content = f.read()
 
 # The AST scanner is catching the direct variable usage `ticker_html` in `st.markdown(ticker_html, unsafe_allow_html=True)`.
@@ -26,5 +26,5 @@ with open("tests/test_xss_scanner.py", "r") as f:
 
 content = content.replace("st.markdown(ticker_html, unsafe_allow_html=True)", "st.markdown(''.join([ticker_html]), unsafe_allow_html=True)")
 
-with open("streamlit_app/cryptop_crypto_circus_main.py", "w") as f:
+with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "w") as f:
     f.write(content)

@@ -1,4 +1,4 @@
-with open("streamlit_app/cryptop_crypto_circus_main.py", "r") as f:
+with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "r") as f:
     content = f.read()
 
 # Replace Pie chart with Sunburst/Donut and better tooltips
@@ -20,7 +20,7 @@ new_pie = """        # Visual Improvement 5: Sunburst / Donut Upgrade
 
 content = content.replace(old_pie, new_pie)
 
-with open("streamlit_app/cryptop_crypto_circus_main.py", "w") as f:
+with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "w") as f:
     f.write(content)
 
 print("Sunburst Portfolio Added")

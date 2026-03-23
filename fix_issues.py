@@ -1,6 +1,6 @@
 import re
 
-with open("streamlit_app/cryptop_crypto_circus_main.py", "r") as f:
+with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "r") as f:
     content = f.read()
 
 # 1. Check make_subplots import
@@ -9,7 +9,7 @@ if "from plotly.subplots import make_subplots" not in content:
 
 # 2. Add get_historical_volume import to main
 if "get_historical_volume" not in content[:1000]: # Check imports area
-    import_search = "from modules.cryptop_crypto_circus_helper import ("
+    import_search = "from modules.cryptop_crypto_fortune_teller_helper import ("
     import_replace = import_search + "\n    get_historical_volume,"
     content = content.replace(import_search, import_replace)
 
@@ -37,5 +37,5 @@ else:
 
 shutil.copy("/home/jules/verification/portfolio_tab.png", "streamlit_app/assets/screenshot_4.png")
 
-with open("streamlit_app/cryptop_crypto_circus_main.py", "w") as f:
+with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "w") as f:
     f.write(content)

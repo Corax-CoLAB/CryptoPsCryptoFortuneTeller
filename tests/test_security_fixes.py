@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 # Import from helper. Note: validate_coin_id might not exist yet if running TDD,
 # but we assume it will be added.
 # We need to ensure the module is importable for the reload to work.
-import streamlit_app.modules.cryptop_crypto_circus_helper
+import streamlit_app.modules.cryptop_crypto_fortune_teller_helper
 
 def test_security_fixes_isolated():
     """
@@ -21,10 +21,10 @@ def test_security_fixes_isolated():
 
     with patch.dict(sys.modules, {'streamlit': mock_st}):
         # Reload helper to use the mocked streamlit
-        from streamlit_app.modules import cryptop_crypto_circus_helper
-        importlib.reload(cryptop_crypto_circus_helper)
+        from streamlit_app.modules import cryptop_crypto_fortune_teller_helper
+        importlib.reload(cryptop_crypto_fortune_teller_helper)
 
-        from streamlit_app.modules.cryptop_crypto_circus_helper import (
+        from streamlit_app.modules.cryptop_crypto_fortune_teller_helper import (
             get_historical_prices,
             get_historical_ohlc,
             get_coin_metrics,
@@ -33,7 +33,7 @@ def test_security_fixes_isolated():
 
         # Mock the CoinGeckoAPI client in the reloaded module
         mock_cg = MagicMock()
-        cryptop_crypto_circus_helper.cg = mock_cg
+        cryptop_crypto_fortune_teller_helper.cg = mock_cg
 
         # --- TEST 1: validate_coin_id ---
         assert validate_coin_id("bitcoin") is True

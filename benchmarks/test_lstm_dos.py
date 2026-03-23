@@ -9,7 +9,7 @@ import warnings
 # Add app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
 
-from modules.cryptop_crypto_circus_models import forecast_lstm
+from modules.cryptop_crypto_fortune_teller_models import forecast_lstm
 
 def test_lstm_history_dos():
     print("Generating dummy data...")

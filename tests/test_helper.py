@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 # Add streamlit_app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
 
-from modules.cryptop_crypto_circus_helper import (
+from modules.cryptop_crypto_fortune_teller_helper import (
     compute_volatility,
     calculate_rsi,
     calculate_macd,
@@ -88,8 +88,8 @@ def test_calculate_roi_zero_investment():
     assert val == 0
     assert pct == 0
 
-@patch('modules.cryptop_crypto_circus_helper.st.error')
-@patch('modules.cryptop_crypto_circus_helper.cg')
+@patch('modules.cryptop_crypto_fortune_teller_helper.st.error')
+@patch('modules.cryptop_crypto_fortune_teller_helper.cg')
 def test_get_coin_market_data(mock_cg, mock_st_error):
     # Setup mock
     mock_cg.get_coin_by_id.return_value = {

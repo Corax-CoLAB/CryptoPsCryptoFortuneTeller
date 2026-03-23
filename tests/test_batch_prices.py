@@ -2,10 +2,10 @@
 import pandas as pd
 import unittest
 from unittest.mock import patch
-from streamlit_app.modules.cryptop_crypto_circus_helper import get_batch_historical_prices
+from streamlit_app.modules.cryptop_crypto_fortune_teller_helper import get_batch_historical_prices
 
 class TestOptimization(unittest.TestCase):
-    @patch('streamlit_app.modules.cryptop_crypto_circus_helper.get_historical_prices')
+    @patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.get_historical_prices')
     def test_batch_prices(self, mock_get_prices):
         # Setup mock returns
         dates = pd.date_range('2023-01-01', periods=3)
@@ -32,8 +32,8 @@ class TestOptimization(unittest.TestCase):
         self.assertEqual(res['ethereum'].iloc[0], 20)
         print("Batch prices optimization verified!")
 
-    @patch('streamlit_app.modules.cryptop_crypto_circus_helper.get_historical_prices')
-    @patch('streamlit_app.modules.cryptop_crypto_circus_helper.st')
+    @patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.get_historical_prices')
+    @patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.st')
     def test_batch_prices_limit(self, mock_st, mock_get_prices):
         # 🛡️ Sentinel Test: Verify batch size limit
 
@@ -54,7 +54,7 @@ class TestOptimization(unittest.TestCase):
         mock_st.warning.assert_called_once()
         print("Security limit verified!")
 
-    @patch('streamlit_app.modules.cryptop_crypto_circus_helper.get_historical_prices')
+    @patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.get_historical_prices')
     def test_batch_prices_deduplication(self, mock_get_prices):
         # 🛡️ Sentinel Test: Verify deduplication of inputs to prevent DoS
 

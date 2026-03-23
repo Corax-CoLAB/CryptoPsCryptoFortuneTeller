@@ -1,4 +1,4 @@
-with open("streamlit_app/modules/cryptop_crypto_circus_models.py", "r") as f:
+with open("streamlit_app/modules/cryptop_crypto_fortune_teller_models.py", "r") as f:
     content = f.read()
 
 auto_arima_import = """
@@ -52,7 +52,7 @@ new_sarima = """        # Technical Improvement 2: Dynamic SARIMA order selectio
         model_fit = model.fit(disp=False)"""
 content = content.replace(old_sarima, new_sarima)
 
-with open("streamlit_app/modules/cryptop_crypto_circus_models.py", "w") as f:
+with open("streamlit_app/modules/cryptop_crypto_fortune_teller_models.py", "w") as f:
     f.write(content)
 
 print("Models updated with Auto-ARIMA successfully")

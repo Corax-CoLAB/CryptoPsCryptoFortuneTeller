@@ -1,4 +1,4 @@
-with open("streamlit_app/cryptop_crypto_circus_main.py", "r") as f:
+with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "r") as f:
     content = f.read()
 
 ticker_code = """
@@ -41,7 +41,7 @@ if not gainers.empty:
 if "Feature: Ticker Tape" not in content:
     content = content.replace("st.markdown(\"<hr>\", unsafe_allow_html=True)", "st.markdown(\"<hr>\", unsafe_allow_html=True)\n" + ticker_code)
 
-with open("streamlit_app/cryptop_crypto_circus_main.py", "w") as f:
+with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "w") as f:
     f.write(content)
 
 print("Ticker Tape Added")

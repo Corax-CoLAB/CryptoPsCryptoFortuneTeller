@@ -8,7 +8,7 @@ import numpy as np
 # Add app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
 
-from modules.cryptop_crypto_circus_models import _run_prophet_model
+from modules.cryptop_crypto_fortune_teller_models import _run_prophet_model
 
 def test_prophet_dos():
     print("Generating dummy data...")

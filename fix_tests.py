@@ -1,7 +1,7 @@
 import re
 
 # Fix XSS Issue
-with open("streamlit_app/cryptop_crypto_circus_main.py", "r") as f:
+with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "r") as f:
     main_content = f.read()
 
 # Issue is at line 117 (or nearby). It's the ticker tape html.
@@ -19,7 +19,7 @@ ticker_fix_new2 = """        ticker_items.append(f"<span style='margin-right: 30
 main_content = main_content.replace(ticker_fix_old, ticker_fix_new)
 main_content = main_content.replace(ticker_fix_old2, ticker_fix_new2)
 
-with open("streamlit_app/cryptop_crypto_circus_main.py", "w") as f:
+with open("streamlit_app/cryptop_crypto_fortune_teller_main.py", "w") as f:
     f.write(main_content)
 
 # Fix FnG Test Issues
@@ -30,8 +30,8 @@ with open("tests/test_fng_security.py", "r") as f:
     test_content = f.read()
 
 test_content = test_content.replace(
-    "@patch('modules.cryptop_crypto_circus_helper.requests.get')",
-    "@patch('modules.cryptop_crypto_circus_helper.req_session.get')"
+    "@patch('modules.cryptop_crypto_fortune_teller_helper.requests.get')",
+    "@patch('modules.cryptop_crypto_fortune_teller_helper.req_session.get')"
 )
 
 with open("tests/test_fng_security.py", "w") as f:

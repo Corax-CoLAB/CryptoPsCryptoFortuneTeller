@@ -1,4 +1,4 @@
-# cryptop_crypto_circus_main.py
+# cryptop_crypto_fortune_teller_main.py
 
 import streamlit as st
 import logging
@@ -10,7 +10,7 @@ from plotly.subplots import make_subplots
 import datetime
 import html
 
-from modules.cryptop_crypto_circus_helper import (
+from modules.cryptop_crypto_fortune_teller_helper import (
     get_historical_volume,
     calculate_black_scholes,
     get_coin_list,
@@ -55,17 +55,17 @@ from modules.cryptop_crypto_circus_helper import (
     get_tokenomics_data
 )
 from modules.utils import validate_url
-from modules.cryptop_crypto_circus_models import (
+from modules.cryptop_crypto_fortune_teller_models import (
     auto_tune_prophet,
     forecast_general_ensemble
 )
 from modules.exchange_manager import ExchangeManager
 from modules.freqtrade_manager import FreqtradeManager
-from modules.cryptop_crypto_circus_styles import apply_custom_css
+from modules.cryptop_crypto_fortune_teller_styles import apply_custom_css
 
 # 1) Page config
 st.set_page_config(
-    page_title="Crypto P's Crypto Circus",
+    page_title="Crypto P's Fortune Teller",
     page_icon="🔮",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -83,7 +83,7 @@ with col2:
         st.image(logo_path, width=150)
     except:
         st.write("🔮") # Fallback if image missing
-    st.markdown("<h1 style='text-align: center; color: #FFD700; text-shadow: 0 0 10px #FF00FF;'>🎪 Crypto P's 🔮<br>Crypto Circus</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #FFD700; text-shadow: 0 0 10px #FF00FF;'>🎪 Crypto P's 🔮<br>Fortune Teller</h1>", unsafe_allow_html=True)
     st.markdown("<h4 style='text-align: center; color: #00FFFF; font-family: Cinzel, serif;'>✨ Peer into the Misty Future of the Blockchain ✨</h4>", unsafe_allow_html=True)
 
 st.markdown("<hr>", unsafe_allow_html=True)
@@ -1512,7 +1512,7 @@ with tab11:
     <div style='text-align: center;'>
         <h2>🧙 The Oracle Speaks 🧙</h2>
         <p style='font-size: 1.2rem; font-family: Cinzel, serif; color: #00FFFF;'>
-            Welcome to the upgraded Crypto Circus v3.5!
+            Welcome to the upgraded Fortune Teller v3.5!
         </p>
     </div>
 

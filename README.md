@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="streamlit_app/assets/logo.png" alt="Crypto P's Crypto Circus Logo" width="300" style="border-radius: 50%; box-shadow: 0 0 20px #A020F0; margin-bottom: 20px;">
+<img src="streamlit_app/assets/logo.png" alt="Crypto P's Fortune Teller Logo" width="300" style="border-radius: 50%; box-shadow: 0 0 20px #A020F0; margin-bottom: 20px;">
 
-# 🔮 <span style="color:#A020F0; text-shadow: 0 0 5px #A020F0, 0 0 10px #A020F0, 0 0 20px #FF00FF, 0 0 40px #FF00FF;">Crypto P's Crypto Circus</span> 🔮
+# 🔮 <span style="color:#A020F0; text-shadow: 0 0 5px #A020F0, 0 0 10px #A020F0, 0 0 20px #FF00FF, 0 0 40px #FF00FF;">Crypto P's Fortune Teller</span> 🔮
 
 **A Psychedelic Cosmic Circus of AI-Powered Crypto Analytics & Forecasting**
 
@@ -12,7 +12,7 @@
 [![Streamlit App](https://img.shields.io/badge/Streamlit-App-FF4B4B.svg?style=for-the-badge&logo=streamlit&logoColor=white)](https://cryptop.coraxcolab.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Security: Checked](https://img.shields.io/badge/Security-AST%20%26%20Regex%20Checked-brightgreen.svg?style=for-the-badge)](https://github.com/PelleNybe)
-[![CI](https://github.com/PelleNybe/CryptoCircus/actions/workflows/ci.yml/badge.svg?style=for-the-badge)](https://github.com/PelleNybe/CryptoCircus/actions/workflows/ci.yml)
+[![CI](https://github.com/PelleNybe/CryptoPsFortuneTeller/actions/workflows/ci.yml/badge.svg?style=for-the-badge)](https://github.com/PelleNybe/CryptoPsFortuneTeller/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](http://makeapullrequest.com)
 
 <br>
@@ -35,7 +35,7 @@
 
 ## 🌌 Discover the Future of Trading
 
-Welcome to **Crypto P's Crypto Circus**, an interactive, stunningly designed Streamlit application that empowers you to peer into the misty future of cryptocurrency prices. By leveraging advanced machine learning models (Prophet, LSTM, ARIMA, Random Forest) and real-time data from CoinGecko, CCXT Exchanges, and Freqtrade, this tool provides price forecasts, deep technical analysis, strategy backtesting, and comprehensive market insights.
+Welcome to **Crypto P's Fortune Teller**, an interactive, stunningly designed Streamlit application that empowers you to peer into the misty future of cryptocurrency prices. By leveraging advanced machine learning models (Prophet, LSTM, ARIMA, Random Forest) and real-time data from CoinGecko, CCXT Exchanges, and Freqtrade, this tool provides price forecasts, deep technical analysis, strategy backtesting, and comprehensive market insights.
 
 <br>
 
@@ -207,18 +207,18 @@ We take security seriously. This application includes:
 <br>
 
 ```text
-CryptoPsCryptoCircus/
+CryptoPsFortuneTeller/
 ├── streamlit_app/
 │   ├── assets/
 │   │   ├── logo.png               # App logo
 │   │   └── crypto.gif             # Animation
 │   ├── modules/
-│   │   ├── cryptop_crypto_circus_helper.py  # Indicators, Data fetching
-│   │   ├── cryptop_crypto_circus_models.py  # Prophet, LSTM, ARIMA, RF
-│   │   ├── cryptop_crypto_circus_styles.py  # Psychedelic CSS Theme
+│   │   ├── cryptop_crypto_fortune_teller_helper.py  # Indicators, Data fetching
+│   │   ├── cryptop_crypto_fortune_teller_models.py  # Prophet, LSTM, ARIMA, RF
+│   │   ├── cryptop_crypto_fortune_teller_styles.py  # Psychedelic CSS Theme
 │   │   ├── exchange_manager.py                      # CCXT Connectivity
 │   │   └── freqtrade_manager.py                     # Freqtrade API control
-│   └── cryptop_crypto_circus_main.py      # Entry point
+│   └── cryptop_crypto_fortune_teller_main.py      # Entry point
 ├── benchmarks/                    # Performance benchmarking (LSTM, Prophet, Caching)
 ├── tests/                         # Extensive Pytest & Unittest suite
 ├── health_check.py                # Environment & API validation
@@ -248,8 +248,8 @@ CryptoPsCryptoCircus/
 
 ### 1. Clone & Setup
 ```bash
-git clone https://github.com/PelleNybe/CryptoPsCryptoCircus.git
-cd CryptoPsCryptoCircus
+git clone https://github.com/PelleNybe/CryptoPsFortuneTeller.git
+cd CryptoPsFortuneTeller
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
@@ -272,9 +272,9 @@ python3 health_check.py
 python3 -m pytest
 ```
 
-### 4. Launch the Circus
+### 4. Launch the Fortune Teller
 ```bash
-streamlit run streamlit_app/cryptop_crypto_circus_main.py
+streamlit run streamlit_app/cryptop_crypto_fortune_teller_main.py
 ```
 
 <div align="center">

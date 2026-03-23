@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # This is now the OPTIMIZED version from the codebase
-from streamlit_app.modules.cryptop_crypto_circus_helper import compute_volatility as current_implementation
+from streamlit_app.modules.cryptop_crypto_fortune_teller_helper import compute_volatility as current_implementation
 
 def old_compute_volatility(df, window=14):
     """

@@ -14,14 +14,14 @@ import requests
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
 
 # Reload module to apply mock
-if 'modules.cryptop_crypto_circus_helper' in sys.modules:
-    del sys.modules['modules.cryptop_crypto_circus_helper']
+if 'modules.cryptop_crypto_fortune_teller_helper' in sys.modules:
+    del sys.modules['modules.cryptop_crypto_fortune_teller_helper']
 
-from modules.cryptop_crypto_circus_helper import get_fear_and_greed_index
+from modules.cryptop_crypto_fortune_teller_helper import get_fear_and_greed_index
 
 class TestFnGSecurity(unittest.TestCase):
 
-    @patch('modules.cryptop_crypto_circus_helper.req_session.get')
+    @patch('modules.cryptop_crypto_fortune_teller_helper.req_session.get')
     def test_fng_raise_for_status(self, mock_get):
         """
         Sentinel Security Test:
@@ -37,7 +37,7 @@ class TestFnGSecurity(unittest.TestCase):
         if not mock_response.raise_for_status.called:
              self.fail("Security Enhancement Required: response.raise_for_status() was not called.")
 
-    @patch('modules.cryptop_crypto_circus_helper.req_session.get')
+    @patch('modules.cryptop_crypto_fortune_teller_helper.req_session.get')
     def test_fng_user_agent(self, mock_get):
         """
         Sentinel Security Test:
@@ -58,9 +58,9 @@ class TestFnGSecurity(unittest.TestCase):
         if 'User-Agent' not in headers:
              self.fail("Security Enhancement Required: Missing User-Agent header in requests.get call.")
 
-        self.assertIn('CryptoCircus', headers['User-Agent'], "User-Agent should be descriptive.")
+        self.assertIn('CryptoPsFortuneTeller', headers['User-Agent'], "User-Agent should be descriptive.")
 
-    @patch('modules.cryptop_crypto_circus_helper.req_session.get')
+    @patch('modules.cryptop_crypto_fortune_teller_helper.req_session.get')
     def test_fng_timeout_consistency(self, mock_get):
         """
         Sentinel Security Test:

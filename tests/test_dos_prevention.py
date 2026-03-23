@@ -9,9 +9,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../stre
 
 def get_helper_module():
     """Helper to reload the module with mocked streamlit"""
-    if 'modules.cryptop_crypto_circus_helper' in sys.modules:
-        del sys.modules['modules.cryptop_crypto_circus_helper']
-    import modules.cryptop_crypto_circus_helper as helper
+    if 'modules.cryptop_crypto_fortune_teller_helper' in sys.modules:
+        del sys.modules['modules.cryptop_crypto_fortune_teller_helper']
+    import modules.cryptop_crypto_fortune_teller_helper as helper
     return helper
 
 def test_get_historical_prices_dos_prevention():

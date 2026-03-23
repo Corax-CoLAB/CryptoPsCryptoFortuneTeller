@@ -14,11 +14,11 @@ sys.modules['streamlit'].error = MagicMock()
 # Add streamlit_app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
 
-import modules.cryptop_crypto_circus_models
+import modules.cryptop_crypto_fortune_teller_models
 # Force reload to ensure it uses the mocked streamlit
-importlib.reload(modules.cryptop_crypto_circus_models)
+importlib.reload(modules.cryptop_crypto_fortune_teller_models)
 
-from modules.cryptop_crypto_circus_models import forecast_prophet_ensemble, get_prophet_config
+from modules.cryptop_crypto_fortune_teller_models import forecast_prophet_ensemble, get_prophet_config
 
 class TestProphetEnsemble(unittest.TestCase):
 
@@ -29,7 +29,7 @@ class TestProphetEnsemble(unittest.TestCase):
             'close': np.linspace(100, 200, 100)
         }).set_index('date')
 
-    @patch('modules.cryptop_crypto_circus_models.Prophet')
+    @patch('modules.cryptop_crypto_fortune_teller_models.Prophet')
     def test_single_model(self, mock_prophet):
         # Setup mock return
         mock_model_instance = MagicMock()
@@ -56,7 +56,7 @@ class TestProphetEnsemble(unittest.TestCase):
         self.assertIn('yhat', res.columns)
         mock_prophet.assert_called() # Should be called
 
-    @patch('modules.cryptop_crypto_circus_models.Prophet')
+    @patch('modules.cryptop_crypto_fortune_teller_models.Prophet')
     def test_ensemble_averaging(self, mock_prophet):
         # Setup mock
         mock_model_instance = MagicMock()
@@ -100,7 +100,7 @@ class TestProphetEnsemble(unittest.TestCase):
         self.assertAlmostEqual(res['yhat_lower'].iloc[0], 140.0)
         self.assertAlmostEqual(res['yhat_upper'].iloc[0], 160.0)
 
-    @patch('modules.cryptop_crypto_circus_models.Prophet')
+    @patch('modules.cryptop_crypto_fortune_teller_models.Prophet')
     def test_sentiment_adjustment(self, mock_prophet):
         # Setup mock
         mock_model_instance = MagicMock()

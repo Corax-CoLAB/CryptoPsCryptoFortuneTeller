@@ -14,7 +14,7 @@ sys.modules['streamlit'].error = MagicMock()
 # Add streamlit_app to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../streamlit_app')))
 
-from modules.cryptop_crypto_circus_models import forecast_arima, forecast_sarima, forecast_general_ensemble
+from modules.cryptop_crypto_fortune_teller_models import forecast_arima, forecast_sarima, forecast_general_ensemble
 
 class TestNewModels(unittest.TestCase):
 
@@ -70,9 +70,9 @@ class TestNewModels(unittest.TestCase):
 
             self.assertTrue(res['yhat'].iloc[0] > 190)
 
-    @patch('modules.cryptop_crypto_circus_models.forecast_arima')
-    @patch('modules.cryptop_crypto_circus_models.forecast_sarima')
-    @patch('modules.cryptop_crypto_circus_models._run_prophet_model')
+    @patch('modules.cryptop_crypto_fortune_teller_models.forecast_arima')
+    @patch('modules.cryptop_crypto_fortune_teller_models.forecast_sarima')
+    @patch('modules.cryptop_crypto_fortune_teller_models._run_prophet_model')
     def test_general_ensemble_mixing(self, mock_prophet, mock_sarima, mock_arima):
         # Setup mocks to return standard simple frames (future only for arima/sarima, full for prophet)
 
