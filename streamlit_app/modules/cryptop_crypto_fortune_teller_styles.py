@@ -24,7 +24,7 @@ def apply_custom_css():
         text-shadow: 0 0 5px #00FFFF;
     }
 
-    /* Main Background - Deep Psychedelic Cosmic Circus */
+    /* Main Background - Deep Psychedelic Cosmic Fortune Teller */
     .stApp {
         background: radial-gradient(circle at center, #2a0e3b 0%, #150020 60%, #000000 100%);
         background-attachment: fixed;

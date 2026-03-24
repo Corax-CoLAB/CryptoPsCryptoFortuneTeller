@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="streamlit_app/assets/logo.png" alt="Crypto P's Fortune Teller Logo" width="300" style="border-radius: 50%; box-shadow: 0 0 20px #A020F0; margin-bottom: 20px;">
+<img src="streamlit_app/assets/logo.png" alt="Crypto P's Crypto Fortune Teller Logo" width="300" style="border-radius: 50%; box-shadow: 0 0 20px #A020F0; margin-bottom: 20px;">
 
-# 🔮 <span style="color:#A020F0; text-shadow: 0 0 5px #A020F0, 0 0 10px #A020F0, 0 0 20px #FF00FF, 0 0 40px #FF00FF;">Crypto P's Fortune Teller</span> 🔮
+# 🔮 <span style="color:#A020F0; text-shadow: 0 0 5px #A020F0, 0 0 10px #A020F0, 0 0 20px #FF00FF, 0 0 40px #FF00FF;">Crypto P's Crypto Fortune Teller</span> 🔮
 
-**A Psychedelic Cosmic Circus of AI-Powered Crypto Analytics & Forecasting**
+**A Psychedelic Cosmic Fortune Teller of AI-Powered Crypto Analytics & Forecasting**
 
 <br>
 
@@ -35,7 +35,7 @@
 
 ## 🌌 Discover the Future of Trading
 
-Welcome to **Crypto P's Fortune Teller**, an interactive, stunningly designed Streamlit application that empowers you to peer into the misty future of cryptocurrency prices. By leveraging advanced machine learning models (Prophet, LSTM, ARIMA, Random Forest) and real-time data from CoinGecko, CCXT Exchanges, and Freqtrade, this tool provides price forecasts, deep technical analysis, strategy backtesting, and comprehensive market insights.
+Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly designed Streamlit application that empowers you to peer into the misty future of cryptocurrency prices. By leveraging advanced machine learning models (Prophet, LSTM, ARIMA, Random Forest) and real-time data from CoinGecko, CCXT Exchanges, and Freqtrade, this tool provides price forecasts, deep technical analysis, strategy backtesting, and comprehensive market insights.
 
 <br>
 
@@ -163,9 +163,9 @@ This masterpiece of crypto-analytical software was conjured by **Pelle Nyberg** 
 <hr style="border: 1px solid #A020F0; width: 80%;">
 </div>
 
-## 🎨 A Psychedelic Cosmic Circus Theme
+## 🎨 A Psychedelic Cosmic Fortune Teller Theme
 
-The UI enforces a **'Psychedelic Cosmic Circus'** theme, utilizing dark-themed neon accents, deep purple/black radial gradients, and custom Google Fonts (`Rye`, `Cinzel`, `Quicksand`, `Orbitron`). It’s an immersive, trippy, yet highly professional analytics experience that transports you to another dimension while keeping you grounded in solid data.
+The UI enforces a **'Psychedelic Cosmic Fortune Teller'** theme, utilizing dark-themed neon accents, deep purple/black radial gradients, and custom Google Fonts (`Rye`, `Cinzel`, `Quicksand`, `Orbitron`). It’s an immersive, trippy, yet highly professional analytics experience that transports you to another dimension while keeping you grounded in solid data.
 
 <br>
 

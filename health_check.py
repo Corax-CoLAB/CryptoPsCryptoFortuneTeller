@@ -80,7 +80,7 @@ def run_tests():
         return False
 
 def main():
-    print_header("CRYPTO P'S FORTUNE TELLER - SYSTEM HEALTH CHECK")
+    print_header("CRYPTO P'S CRYPTO FORTUNE TELLER - SYSTEM HEALTH CHECK")
 
     steps = [
         check_python_version,
