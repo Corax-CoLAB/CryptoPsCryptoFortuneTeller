@@ -65,7 +65,7 @@ from modules.cryptop_crypto_fortune_teller_styles import apply_custom_css
 
 # 1) Page config
 st.set_page_config(
-    page_title="Crypto P's Fortune Teller",
+    page_title="Crypto P's Crypto Fortune Teller",
     page_icon="🔮",
     layout="wide",
     initial_sidebar_state="expanded",
