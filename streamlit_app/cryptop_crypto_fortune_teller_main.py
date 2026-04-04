@@ -1228,7 +1228,7 @@ with tab9:
             if bal_df is not None and not bal_df.empty:
                 st.dataframe(bal_df)
                 # Pie chart of assets
-                fig_bal = px.pie(bal_df, values='Total', names='Currency', title='Asset Allocation')
+                fig_bal = px.sunburst(bal_df, path=['Currency'], values='Total', title='Asset Allocation (Sunburst)')
                 fig_bal.update_layout(template="plotly_dark", height=300)
                 st.plotly_chart(fig_bal, use_container_width=True)
             elif bal_err:

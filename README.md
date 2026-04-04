@@ -117,11 +117,11 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 ## 📸 A Glimpse into the Magic
 
 <div align="center">
-  <img src="streamlit_app/assets/screenshot_1.png" alt="Dashboard View" width="48%" style="border-radius: 8px; margin: 1%;">
-  <img src="streamlit_app/assets/screenshot_2.png" alt="Technical Analysis" width="48%" style="border-radius: 8px; margin: 1%;">
+  <img src="assets/screenshot1.png" alt="Dashboard View" width="48%" style="border-radius: 8px; margin: 1%;">
+  <img src="assets/screenshot1.png" alt="Technical Analysis" width="48%" style="border-radius: 8px; margin: 1%;">
   <br>
-  <img src="streamlit_app/assets/screenshot_3.png" alt="Machine Learning Models" width="48%" style="border-radius: 8px; margin: 1%;">
-  <img src="streamlit_app/assets/screenshot_4.png" alt="Portfolio Management" width="48%" style="border-radius: 8px; margin: 1%;">
+  <img src="assets/screenshot1.png" alt="Machine Learning Models" width="48%" style="border-radius: 8px; margin: 1%;">
+  <img src="assets/screenshot1.png" alt="Portfolio Management" width="48%" style="border-radius: 8px; margin: 1%;">
 </div>
 
 <br>
