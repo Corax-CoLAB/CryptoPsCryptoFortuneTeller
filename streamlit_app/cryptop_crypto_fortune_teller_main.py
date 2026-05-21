@@ -9,6 +9,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import datetime
 import html
+import uuid
 
 from modules.cryptop_crypto_fortune_teller_helper import (
     get_historical_volume,
@@ -64,6 +65,18 @@ from modules.freqtrade_manager import FreqtradeManager
 from modules.cryptop_crypto_fortune_teller_styles import apply_custom_css
 
 # 1) Page config
+
+# Technical Improvement 5: Session Vault for Secure Credential Management
+@st.cache_resource
+def get_exchange_vault(session_id):
+    return ExchangeManager()
+
+@st.cache_resource
+def get_freqtrade_vault(session_id):
+    # Store just a reference or dict, or the manager itself
+    return {"client": None}
+
+
 st.set_page_config(
     page_title="Crypto P's Crypto Fortune Teller",
     page_icon="🔮",
@@ -1179,9 +1192,12 @@ with tab9:
         st.write("### Connect to Crypto Exchanges")
         st.info("Supports: Bitget, Gate, Bybit, OKX, KuCoin, Binance")
 
-        # Session State for Exchange
-        if 'exchange_client' not in st.session_state:
-            st.session_state.exchange_client = ExchangeManager()
+        # Technical Improvement 5: Session Vault Initialization
+        if 'session_id' not in st.session_state:
+            st.session_state.session_id = str(uuid.uuid4())
+
+        exchange_client = get_exchange_vault(st.session_state.session_id)
+
         if 'exchange_connected' not in st.session_state:
             st.session_state.exchange_connected = False
 
@@ -1203,7 +1219,7 @@ with tab9:
                     }
                     target_ex = ex_id_map[ex_name]
 
-                    success, msg = st.session_state.exchange_client.connect(target_ex, ex_key, ex_secret, ex_pass)
+                    success, msg = exchange_client.connect(target_ex, ex_key, ex_secret, ex_pass)
                     if success:
                         st.session_state.exchange_connected = True
                         st.session_state.connected_exchange_name = ex_name
@@ -1216,7 +1232,8 @@ with tab9:
 
             if st.button("Disconnect"):
                 st.session_state.exchange_connected = False
-                st.session_state.exchange_client = ExchangeManager()
+                exchange_client = ExchangeManager() # Reset the instance
+                get_exchange_vault.clear() # Clear cache for this resource
                 st.experimental_rerun()
 
             # Balance
@@ -1224,7 +1241,7 @@ with tab9:
             if st.button("Refresh Balance"):
                 pass
 
-            bal_df, bal_err = st.session_state.exchange_client.get_balance()
+            bal_df, bal_err = exchange_client.get_balance()
             if bal_df is not None and not bal_df.empty:
                 st.dataframe(bal_df)
                 # Pie chart of assets
@@ -1254,7 +1271,7 @@ with tab9:
             if st.button("Place Order", type="primary"):
                 if t_amount > 0:
                     with st.spinner("Placing order..."):
-                        order, ord_msg = st.session_state.exchange_client.create_order(
+                        order, ord_msg = exchange_client.create_order(
                             t_symbol, t_type.lower(), t_side.lower(), t_amount, t_price
                         )
                         if order:
@@ -1270,7 +1287,7 @@ with tab9:
             with st.expander("Open Orders"):
                 if st.button("Refresh Orders"):
                     pass
-                orders_df, ord_err = st.session_state.exchange_client.fetch_open_orders(t_symbol)
+                orders_df, ord_err = exchange_client.fetch_open_orders(t_symbol)
                 if orders_df is not None and not orders_df.empty:
                     st.dataframe(orders_df)
                 elif ord_err:
@@ -1283,7 +1300,7 @@ with tab9:
             st.write("#### 📊 Order Book Depth Analysis")
             if st.button("Analyze Depth", key="ob_btn"):
                 with st.spinner(f"Fetching L2 Order Book for {t_symbol}..."):
-                    ob, err = st.session_state.exchange_client.get_order_book(t_symbol, limit=100)
+                    ob, err = exchange_client.get_order_book(t_symbol, limit=100)
                     if ob:
                         bids = ob.get('bids', [])
                         asks = ob.get('asks', [])
@@ -1337,9 +1354,12 @@ with tab9:
     elif con_mode == "🤖 Freqtrade":
         st.write("### 🤖 Freqtrade Bot Controller")
 
-        # Session State for Freqtrade
-        if 'ft_client' not in st.session_state:
-            st.session_state.ft_client = None
+        # Technical Improvement 5: Freqtrade Session Vault
+        if 'session_id' not in st.session_state:
+            st.session_state.session_id = str(uuid.uuid4())
+
+        ft_vault = get_freqtrade_vault(st.session_state.session_id)
+
         if 'ft_connected' not in st.session_state:
             st.session_state.ft_connected = False
 
@@ -1360,7 +1380,7 @@ with tab9:
                         # Try login
                         success, msg = client.login()
                         if success:
-                            st.session_state.ft_client = client
+                            ft_vault['client'] = client
                             st.session_state.ft_connected = True
                             st.success(msg)
                         else:
@@ -1369,7 +1389,7 @@ with tab9:
         if st.session_state.ft_connected:
             st.success("Freqtrade Connected 🤖")
 
-            client = st.session_state.ft_client
+            client = ft_vault.get('client')
 
             # Controls
             col_c1, col_c2, col_c3 = st.columns(3)
