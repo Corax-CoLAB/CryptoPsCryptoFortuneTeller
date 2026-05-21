@@ -40,6 +40,25 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 <br>
 
 <details>
+<summary><b><h3 style="display:inline-block; cursor:pointer;">🚀 Recent Enhancements</h3></b></summary>
+<br>
+<ul>
+  <li><b>Robust API Session Management:</b> Implemented a robust `requests.Session` with retry logic and exponential backoff for PyCoinGecko to handle rate limits and transient network errors (Technical Improvement).</li>
+  <li><b>Memory Optimization via Downcasting:</b> Automatically downcasts historical dataframes (`float64` to `float32`) to reduce memory footprint, especially crucial for large batch historical data fetching (Technical Improvement).</li>
+  <li><b>Auto-ARIMA Model Selection:</b> Integrated automated hyperparameter grid-search for the ARIMA model to dynamically select the optimal `(p, d, q)` order based on AIC score (Technical Improvement).</li>
+  <li><b>CCXT L2 Order Book Integration:</b> Added L2 Order Book depth fetching capabilities to the `ExchangeManager` for real-time liquidity and bid-ask analysis (Technical Improvement).</li>
+  <li><b>Secure Credential Management (Session Vault):</b> Utilized Streamlit's `st.cache_resource` and session UUIDs to securely store sensitive API credentials for CCXT Exchanges and Freqtrade bots (Technical Improvement).</li>
+  <li><b>Dynamic Scrolling Ticker Tape:</b> Implemented a CSS-animated ticker tape displaying live top gainers and losers in the main UI (Visual Improvement).</li>
+  <li><b>Psychedelic Cosmic Theme Styling:</b> Enforced a deep purple/black neon aesthetic with custom Google Fonts (`Rye`, `Cinzel`, `Quicksand`, `Orbitron`) and glassmorphism elements (Visual Improvement).</li>
+  <li><b>Enhanced Fear & Greed Gauge:</b> Upgraded the Fear & Greed index display with an interactive Plotly Gauge chart (Visual Improvement).</li>
+  <li><b>Hierarchical Portfolio Allocation:</b> Replaced the standard pie chart with a dynamic Plotly Sunburst chart for visualizing portfolio composition and PnL simultaneously (Visual Improvement).</li>
+  <li><b>Custom Trading Signal Badges:</b> Designed styled HTML/CSS badges for "Buy/Sell/Hold" signals, dynamically colored based on model ensemble projections (Visual Improvement).</li>
+</ul>
+</details>
+
+<br>
+
+<details>
 <summary><b><h3 style="display:inline-block; cursor:pointer;">🧠 AI-Powered Forecasting</h3></b></summary>
 <br>
 <ul>
