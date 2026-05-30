@@ -30,6 +30,9 @@ def get_session():
 # Global robust session
 req_session = get_session()
 
+# Technical Improvement 1: Attach robust session to PyCoinGecko client
+cg.session = req_session
+
 # Replace cg direct requests to have retry wrapping where manual
 def cg_retry_call(func, *args, retries=3, delay=1, **kwargs):
     for attempt in range(retries):
