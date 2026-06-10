@@ -1,5 +1,5 @@
 streamlit>=1.56.0
-pandas>=2.0.0
+pandas>=3.0.3
 numpy>=1.25.0,<3.0.0
 plotly>=6.8.0
 pycoingecko>=2.1.0
