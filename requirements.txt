@@ -9,4 +9,4 @@ scikit-learn>=1.2.0
 requests>=2.34.2
 statsmodels>=0.14.6
 ccxt>=4.5.56
-textblob>=0.17.0
+textblob>=0.20.0
