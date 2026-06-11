@@ -39,7 +39,7 @@ def test_get_historical_prices_dos_prevention():
         with patch.object(helper, '_fetch_historical_prices_cached') as mock_fetch:
             # Create a dummy dataframe with some history
             # Sentinel: Ensure naive timestamps
-            dates = pd.date_range(end=pd.Timestamp.utcnow().replace(tzinfo=None), periods=100)
+            dates = pd.date_range(end=pd.Timestamp.now('UTC').replace(tzinfo=None), periods=100)
             df = pd.DataFrame({'close': range(100)}, index=dates)
             mock_fetch.return_value = df
 
@@ -79,7 +79,7 @@ def test_get_historical_ohlc_dos_prevention():
         helper = get_helper_module()
 
         with patch.object(helper, '_fetch_historical_ohlc_cached') as mock_fetch:
-            dates = pd.date_range(end=pd.Timestamp.utcnow().replace(tzinfo=None), periods=50)
+            dates = pd.date_range(end=pd.Timestamp.now('UTC').replace(tzinfo=None), periods=50)
             df = pd.DataFrame({
                 'open': range(50), 'high': range(50), 'low': range(50), 'close': range(50)
             }, index=dates)
