@@ -171,7 +171,7 @@ def get_historical_prices(coin_id, vs_currency='usd', days=365):
     # Use UTC for consistency as CoinGecko timestamps are UTC based.
     # df['date'] (index) is naive UTC.
     try:
-        cutoff_date = pd.Timestamp.utcnow().replace(tzinfo=None) - pd.Timedelta(days=days_int)
+        cutoff_date = pd.Timestamp.now('UTC').replace(tzinfo=None) - pd.Timedelta(days=days_int)
         return df[df.index >= cutoff_date]
     except (pd.errors.OutOfBoundsTimedelta, OverflowError, ValueError):
         # Fallback for any other overflow issues
@@ -239,7 +239,7 @@ def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
 
     # Slice the dataframe to the requested number of days
     try:
-        cutoff_date = pd.Timestamp.utcnow().replace(tzinfo=None) - pd.Timedelta(days=days_val)
+        cutoff_date = pd.Timestamp.now('UTC').replace(tzinfo=None) - pd.Timedelta(days=days_val)
         return df[df.index >= cutoff_date]
     except (pd.errors.OutOfBoundsTimedelta, OverflowError, ValueError):
         return df
