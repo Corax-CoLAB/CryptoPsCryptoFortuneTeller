@@ -1,7 +1,7 @@
 streamlit>=1.58.0
 pandas>=3.0.3
 numpy>=1.25.0,<3.0.0
-plotly>=6.8.0
+plotly>=6.9.0
 pycoingecko>=2.1.0
 prophet>=1.1.1
 tensorflow>=2.21.0
