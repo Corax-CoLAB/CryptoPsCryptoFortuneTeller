@@ -621,7 +621,7 @@ def get_batch_historical_prices(coin_ids: list, days: int = 90) -> pd.DataFrame:
                 df = df.rename(columns={'close': cid})
                 return df
         except Exception:
-            pass
+            logging.error(f"Failed to fetch price for {cid}", exc_info=True)
         return None
 
     # Use ThreadPoolExecutor for concurrent requests
