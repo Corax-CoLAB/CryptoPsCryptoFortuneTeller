@@ -28,9 +28,12 @@ jobs:
         pip install pytest pytest-playwright
         playwright install chromium
     - name: Run health check
+      env:
+        PYTHONPATH: ${{ github.workspace }}/streamlit_app
       run: |
         python health_check.py
     - name: Run tests with pytest
+      env:
+        PYTHONPATH: ${{ github.workspace }}/streamlit_app
       run: |
-        export PYTHONPATH=$PYTHONPATH:streamlit_app
         python -m pytest tests/ -v

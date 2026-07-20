@@ -70,7 +70,9 @@ def run_tests():
     print("Executing pytest... (this may take a minute)")
 
     # We run pytest via subprocess to ensure clean environment
-    result = subprocess.run([sys.executable, "-m", "pytest", "tests/", "benchmarks/"], capture_output=False)
+    env = os.environ.copy()
+    env["PYTHONPATH"] = f"{env.get('PYTHONPATH', '')}:{os.path.abspath('streamlit_app')}"
+    result = subprocess.run([sys.executable, "-m", "pytest", "tests/", "benchmarks/"], capture_output=False, env=env)
 
     if result.returncode == 0:
         print("\n✅ All tests passed successfully!")
