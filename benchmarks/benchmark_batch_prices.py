@@ -33,7 +33,7 @@ def sequential_batch_prices(coin_ids, days=90):
                 df = df.rename(columns={'close': cid})
                 dfs.append(df)
         except Exception:
-            pass
+            logging.error(f"Failed to fetch price for {cid}", exc_info=True)
 
     if not dfs:
         return pd.DataFrame()
