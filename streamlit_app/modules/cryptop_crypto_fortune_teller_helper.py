@@ -1162,47 +1162,46 @@ def calculate_dca_strategy(coin_id, amount, freq_days, duration_days):
     # Filter df to nearest dates
     dca_df = df.reindex(dca_dates, method='nearest')
 
-    total_invested = 0
-    total_coins = 0
+    # Drop missing values and non-positive prices
+    dca_df = dca_df.dropna(subset=['close'])
+    dca_df = dca_df[dca_df['close'] > 0]
 
-    # Simulate Buys
-    history = []
-    for date, row in dca_df.iterrows():
-        # Handle cases where reindex created NaNs (if dates out of range)
-        if pd.isna(row['close']):
-            continue
-
-        price = row['close']
-        if price <= 0: continue
-
-        coins_bought = amount / price
-        total_invested += amount
-        total_coins += coins_bought
-        current_value = total_coins * price
-
-        history.append({
-            'date': date,
-            'invested': total_invested,
-            'value': current_value,
-            'price': price
-        })
-
-    res_df = pd.DataFrame(history).set_index('date')
-
-    if res_df.empty:
+    if dca_df.empty:
         return None
 
+    # Vectorized computation
+    prices = dca_df['close'].values
+    coins_bought = amount / prices
+
+    total_invested = np.arange(1, len(prices) + 1) * amount
+    total_coins = np.cumsum(coins_bought)
+    portfolio_value = total_coins * prices
+
+    res_df = pd.DataFrame({
+        'date': dca_df.index,
+        'invested': total_invested,
+        'value': portfolio_value,
+        'price': prices
+    })
+
+    res_df.set_index('date', inplace=True)
+
     current_price = df.iloc[-1]['close']
-    dca_final_value = total_coins * current_price
+
+    # Extract scalar final values
+    final_total_coins = total_coins[-1]
+    final_total_invested = total_invested[-1]
+
+    dca_final_value = final_total_coins * current_price
 
     # Lump Sum Comparison (invest total_invested at start)
-    lump_coins = total_invested / df.iloc[0]['close']
+    lump_coins = final_total_invested / df.iloc[0]['close']
     lump_final_value = lump_coins * current_price
 
     return {
         'dca_value': dca_final_value,
         'lump_value': lump_final_value,
-        'total_invested': total_invested,
+        'total_invested': final_total_invested,
         'history_df': res_df
     }
 
