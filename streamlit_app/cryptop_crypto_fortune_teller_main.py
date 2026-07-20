@@ -1239,7 +1239,7 @@ with tab9:
             # Balance
             st.write("#### 💰 Wallet Balance")
             if st.button("Refresh Balance"):
-                pass
+                st.experimental_rerun()
 
             bal_df, bal_err = exchange_client.get_balance()
             if bal_df is not None and not bal_df.empty:
@@ -1286,7 +1286,7 @@ with tab9:
             st.markdown("---")
             with st.expander("Open Orders"):
                 if st.button("Refresh Orders"):
-                    pass
+                    st.experimental_rerun()
                 orders_df, ord_err = exchange_client.fetch_open_orders(t_symbol)
                 if orders_df is not None and not orders_df.empty:
                     st.dataframe(orders_df)
@@ -1405,7 +1405,7 @@ with tab9:
                     else: st.error(msg)
             with col_c3:
                 if st.button("🔄 Refresh Status"):
-                    pass
+                    st.experimental_rerun()
 
             # Status Dashboard
             status, err = client.get_status()
