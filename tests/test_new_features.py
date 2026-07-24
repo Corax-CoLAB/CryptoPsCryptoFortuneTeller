@@ -49,46 +49,44 @@ def test_detect_candlestick_patterns_hammer():
     assert "Hammer (Potential Reversal)" in patterns
 
 # --- Feature 2: Arbitrage ---
-@patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.ccxt')
-def test_get_exchange_arbitrage(mock_ccxt):
-    # Mock exchange classes
+
+@patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.concurrent.futures.ThreadPoolExecutor')
+def test_get_exchange_arbitrage(mock_executor_class):
+    mock_executor = MagicMock()
+    mock_executor_class.return_value.__enter__.return_value = mock_executor
+
+    # Simple synchronous map
+    def sync_map(fn, *iterables):
+        return [fn(x) for x in iterables[0]]
+
+    mock_executor.map.side_effect = sync_map
+
+    # Now mock ccxt inside sys.modules
+    mock_ccxt = MagicMock()
     mock_ex_binance = MagicMock()
     mock_ex_binance.fetch_ticker.return_value = {'last': 50000}
-
     mock_ex_kraken = MagicMock()
     mock_ex_kraken.fetch_ticker.return_value = {'last': 51000}
 
     mock_ccxt.binance.return_value = mock_ex_binance
     mock_ccxt.kraken.return_value = mock_ex_kraken
 
-    # Mock others to raise exception so they are skipped
     mock_ccxt.coinbase.side_effect = AttributeError("Mock Error")
     mock_ccxt.kucoin.side_effect = AttributeError("Mock Error")
     mock_ccxt.okx.side_effect = AttributeError("Mock Error")
     mock_ccxt.gate.side_effect = AttributeError("Mock Error")
     mock_ccxt.bybit.side_effect = AttributeError("Mock Error")
 
-    # NOTE: Since get_exchange_arbitrage uses ThreadPoolExecutor,
-    # mocking the classes inside the thread might be tricky if context is not shared.
-    # However, MagicMock objects are picklable/thread-safe enough for simple tests usually.
-    # If this fails, we might need to mock ThreadPoolExecutor.
-
-    df = get_exchange_arbitrage('BTC')
-
-    # If threads fail to pick up mocks, df might be empty.
-    if df.empty or 'Binance' not in df['Exchange'].values:
-        pytest.skip("Skipping Arbitrage test due to threading/mocking complexity in sandbox.")
+    with patch.dict('sys.modules', {'ccxt': mock_ccxt}):
+        df = get_exchange_arbitrage('BTC')
 
     assert not df.empty
     assert 'Exchange' in df.columns
     assert 'Spread %' in df.columns
-    # Check if we have Binance and Kraken
     exchanges = df['Exchange'].values
     assert 'Binance' in exchanges
     assert 'Kraken' in exchanges
 
-    # Check spread calculation
-    # Min = 50000. Kraken = 51000. Spread = (1000/50000)*100 = 2%
     kraken_row = df[df['Exchange'] == 'Kraken'].iloc[0]
     assert kraken_row['Spread %'] == 2.0
 
