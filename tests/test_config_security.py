@@ -4,7 +4,7 @@ import pytest
 
 def test_streamlit_security_config():
     """
-    Sentinel Security Check:
+
     Verify that critical Streamlit security features are NOT disabled.
     """
     config_path = os.path.join(".streamlit", "config.toml")

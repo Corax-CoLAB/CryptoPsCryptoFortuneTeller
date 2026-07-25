@@ -24,7 +24,7 @@ class TestFnGSecurity(unittest.TestCase):
     @patch('modules.cryptop_crypto_fortune_teller_helper.req_session.get')
     def test_fng_raise_for_status(self, mock_get):
         """
-        Sentinel Security Test:
+
         Verify that get_fear_and_greed_index calls raise_for_status() on the response object.
         """
         mock_response = MagicMock()
@@ -40,7 +40,7 @@ class TestFnGSecurity(unittest.TestCase):
     @patch('modules.cryptop_crypto_fortune_teller_helper.req_session.get')
     def test_fng_user_agent(self, mock_get):
         """
-        Sentinel Security Test:
+
         Verify that a User-Agent header is sent.
         """
         mock_response = MagicMock()
@@ -63,7 +63,7 @@ class TestFnGSecurity(unittest.TestCase):
     @patch('modules.cryptop_crypto_fortune_teller_helper.req_session.get')
     def test_fng_timeout_consistency(self, mock_get):
         """
-        Sentinel Security Test:
+
         Verify timeout is consistent with application standard (20s).
         """
         mock_response = MagicMock()

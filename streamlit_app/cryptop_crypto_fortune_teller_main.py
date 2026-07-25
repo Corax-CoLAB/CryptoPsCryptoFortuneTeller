@@ -157,7 +157,7 @@ with st.sidebar:
         selected_option = st.selectbox("Select Cryptocurrency", options, index=0, help="Search and select the cryptocurrency you want to analyze.")
         coin_id = mapping[selected_option]
 
-        # 🛡️ Sentinel: Global Input Validation for coin_id
+        #Global Input Validation for coin_id
         if not validate_coin_id(coin_id):
             st.error("Invalid Asset ID detected. Please select a valid asset.")
             st.stop()
@@ -1022,7 +1022,7 @@ with tab7:
         if st.button("Calculate Moon Price"):
             with st.spinner("Crunching the numbers..."):
                 try:
-                    # 🛡️ Sentinel: Input Validation for coin_id to prevent injection
+                    #Input Validation for coin_id to prevent injection
                     # (Redundant due to global check, but kept for defense in depth)
                     if not validate_coin_id(coin_id):
                          st.error("Invalid Asset ID.")

@@ -36,7 +36,7 @@ class RequestsScanner(ast.NodeVisitor):
 
 def test_requests_params_usage():
     """
-    Sentinel Security Check:
+
     Scan codebase for requests.* calls that embed query parameters in the URL string.
     Enforces usage of 'params' dictionary for better security and encoding.
     """

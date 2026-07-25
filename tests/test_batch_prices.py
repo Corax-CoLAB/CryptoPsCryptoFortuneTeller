@@ -35,7 +35,7 @@ class TestOptimization(unittest.TestCase):
     @patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.get_historical_prices')
     @patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.st')
     def test_batch_prices_limit(self, mock_st, mock_get_prices):
-        # 🛡️ Sentinel Test: Verify batch size limit
+        #Verify batch size limit
 
         # Setup mock returns to always return a valid DF
         dates = pd.date_range('2023-01-01', periods=1)
@@ -56,7 +56,7 @@ class TestOptimization(unittest.TestCase):
 
     @patch('streamlit_app.modules.cryptop_crypto_fortune_teller_helper.get_historical_prices')
     def test_batch_prices_deduplication(self, mock_get_prices):
-        # 🛡️ Sentinel Test: Verify deduplication of inputs to prevent DoS
+        #Verify deduplication of inputs to prevent DoS
 
         # Setup mock
         dates = pd.date_range('2023-01-01', periods=1)

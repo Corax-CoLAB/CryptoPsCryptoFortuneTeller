@@ -41,7 +41,7 @@ def get_best_arima(series, max_p=3, max_q=3, d=1):
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# 🛡️ Sentinel: DoS Protection Limits
+#DoS Protection Limits
 MAX_FORECAST_HORIZON = 365
 MAX_HISTORY_LENGTH = 2000
 
@@ -186,7 +186,7 @@ def _run_prophet_model(df, config, periods=30):
     """
     Wrapper around _run_prophet_model_fixed to slice the result.
     """
-    # 🛡️ Sentinel: Enforce Input Limits
+    #Enforce Input Limits
     if periods > MAX_FORECAST_HORIZON:
         logging.warning(f"Prophet: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
         periods = MAX_FORECAST_HORIZON
@@ -209,7 +209,7 @@ def forecast_arima(df, periods=30):
     """
     Forecast using ARIMA model (Auto-Regressive Integrated Moving Average).
     """
-    # 🛡️ Sentinel: Enforce Input Limits
+    #Enforce Input Limits
     if periods > MAX_FORECAST_HORIZON:
         logging.warning(f"ARIMA: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
         periods = MAX_FORECAST_HORIZON
@@ -261,7 +261,7 @@ def forecast_sarima(df, periods=30):
     """
     Forecast using SARIMA model (Seasonal ARIMA).
     """
-    # 🛡️ Sentinel: Enforce Input Limits
+    #Enforce Input Limits
     if periods > MAX_FORECAST_HORIZON:
         logging.warning(f"SARIMA: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
         periods = MAX_FORECAST_HORIZON
@@ -310,7 +310,7 @@ def forecast_lstm(df, periods=30, n_steps=60):
     Accepts DataFrame with date index and 'close' column.
     Returns DataFrame with 'ds' and 'yhat'.
     """
-    # 🛡️ Sentinel: Enforce Input Limits
+    #Enforce Input Limits
     if periods > MAX_FORECAST_HORIZON:
         logging.warning(f"LSTM: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
         periods = MAX_FORECAST_HORIZON
@@ -391,7 +391,7 @@ def forecast_random_forest(df, periods=30, n_lags=14):
     """
     Forecast using Random Forest Regressor.
     """
-    # 🛡️ Sentinel: Enforce Input Limits
+    #Enforce Input Limits
     if periods > MAX_FORECAST_HORIZON:
         logging.warning(f"RF: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
         periods = MAX_FORECAST_HORIZON
