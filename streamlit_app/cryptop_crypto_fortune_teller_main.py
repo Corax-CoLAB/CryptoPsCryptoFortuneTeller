@@ -108,15 +108,15 @@ with st.spinner("Initializing Oracle..."):
 
 if not gainers.empty:
     ticker_items = []
-    for _, row in gainers.head(5).iterrows():
-        sym = row['symbol'].upper()
-        pct = row['price_change_percentage_24h']
+    for row in gainers.head(5).itertuples():
+        sym = getattr(row, "symbol", "").upper()
+        pct = getattr(row, "price_change_percentage_24h", 0.0)
         color = "#00FF00" if pct > 0 else "#FF0000"
         ticker_items.append(f"<span style='margin-right: 30px; font-weight: bold;'>🔥 {html.escape(str(sym))} <span style='color: {html.escape(str(color))}'>{html.escape(f'{pct:+.2f}%')}</span></span>")
 
-    for _, row in losers.head(5).iterrows():
-        sym = row['symbol'].upper()
-        pct = row['price_change_percentage_24h']
+    for row in losers.head(5).itertuples():
+        sym = getattr(row, "symbol", "").upper()
+        pct = getattr(row, "price_change_percentage_24h", 0.0)
         color = "#00FF00" if pct > 0 else "#FF0000"
         ticker_items.append(f"<span style='margin-right: 30px; font-weight: bold;'>🧊 {html.escape(str(sym))} <span style='color: {html.escape(str(color))}'>{html.escape(f'{pct:+.2f}%')}</span></span>")
 
@@ -465,7 +465,7 @@ with tab2:
             if not vol_for_chart.empty:
                 # Merge to align dates
                 merged_vol = ohlc_df.join(vol_for_chart, how='left').fillna(0)
-                colors = ['green' if row['open'] - row['close'] >= 0 else 'red' for index, row in merged_vol.iterrows()]
+                colors = np.where(merged_vol['open'] - merged_vol['close'] >= 0, 'green', 'red')
                 fig_main.add_trace(go.Bar(
                     x=merged_vol.index, y=merged_vol['volume'], marker_color=colors, name='Volume'
                 ), row=2, col=1)

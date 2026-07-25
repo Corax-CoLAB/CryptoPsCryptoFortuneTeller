@@ -1134,7 +1134,7 @@ def get_exchange_arbitrage(symbol_str):
 
     df['Spread %'] = ((df['Price'] - df['Price'].min()) / df['Price'].min() * 100).round(2)
     df['Alpha Potential'] = ((df['Bid'] - min_ask) / min_ask * 100).round(2)
-    df['Arbitrage'] = df['Alpha Potential'].apply(lambda x: '🔥 Yes' if x > 0 else 'No')
+    df['Arbitrage'] = np.where(df['Alpha Potential'] > 0, '🔥 Yes', 'No')
 
     df = df.sort_values(by='Price').reset_index(drop=True)
     return df
@@ -1297,8 +1297,8 @@ def get_defi_yields(limit=20):
         if not df.empty:
             df = df[['chain', 'project', 'symbol', 'tvlUsd', 'apy', 'ilRisk']]
             df = df.sort_values(by='tvlUsd', ascending=False).head(limit)
-            df['tvlUsd'] = df['tvlUsd'].apply(lambda x: f"${x:,.0f}")
-            df['apy'] = df['apy'].apply(lambda x: f"{x:.2f}%" if pd.notnull(x) else "N/A")
+            df['tvlUsd'] = [f"${x:,.0f}" for x in df['tvlUsd']]
+            df['apy'] = [f"{x:.2f}%" if pd.notnull(x) else "N/A" for x in df['apy']]
             return df
     except Exception as e:
         import logging
@@ -1320,7 +1320,7 @@ def get_whale_alerts(coin_id="bitcoin"):
 
         whales = df[df['is_whale']].tail(10).copy()
         if not whales.empty:
-            whales['volume'] = whales['volume'].apply(lambda x: f"${x:,.0f}")
+            whales['volume'] = [f"${x:,.0f}" for x in whales['volume']]
             return whales[['timestamp', 'volume']].sort_values(by='timestamp', ascending=False)
     except Exception as e:
         import logging
