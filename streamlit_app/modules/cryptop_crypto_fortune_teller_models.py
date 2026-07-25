@@ -334,12 +334,17 @@ def forecast_lstm(df, periods=30, n_steps=60):
     scaler = MinMaxScaler()
     series_scaled = scaler.fit_transform(series.reshape(-1,1))
 
-    X, y = [], []
-    for i in range(n_steps, len(series_scaled)):
-        X.append(series_scaled[i-n_steps:i, 0])
-        y.append(series_scaled[i, 0])
+    # Optimization: Replaced Python loop with NumPy sliding_window_view for data prep
+    # Expected Impact: Significant speedup in LSTM data preparation for large datasets
+    from numpy.lib.stride_tricks import sliding_window_view
+    series_1d = series_scaled[:, 0]
 
-    X, y = np.array(X), np.array(y)
+    if len(series_1d) >= n_steps + 1:
+        windows = sliding_window_view(series_1d, window_shape=n_steps + 1)
+        X = windows[:, :-1]
+        y = windows[:, -1]
+    else:
+        X, y = np.array([]), np.array([])
 
     if len(X) == 0:
          return pd.DataFrame(columns=['ds', 'yhat'])

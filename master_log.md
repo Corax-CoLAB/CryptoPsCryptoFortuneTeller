@@ -13,3 +13,7 @@
 ## 2026-07-26 - [Optimize Conditional Assignments]
 **Learning:** Using `.apply(lambda x: ... if ... else ...)` is slow compared to vectorized numpy operations.
 **Action:** Replaced lambda conditionals with `np.where(condition, true_val, false_val)` in both chart color assignment and DataFrame column calculations (`Alpha Potential`), yielding massive speedups.
+
+## 2026-07-25 - [Optimize LSTM and RF Data Preparation using Vectorization]
+**Learning:** Using Python `for` loops to iterate over datasets to create sliding windows for models like LSTM and Random Forest is slow and doesn't scale well with large datasets.
+**Action:** Replaced the Python `for` loops in `forecast_lstm` and `forecast_random_forest` with fully vectorized data preparation using `numpy.lib.stride_tricks.sliding_window_view`. This delegates the window generation to C-level NumPy code, resulting in faster and more efficient data preprocessing.
