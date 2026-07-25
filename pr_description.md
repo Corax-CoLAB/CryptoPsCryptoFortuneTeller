@@ -1,6 +1,4 @@
-Dev, PelleNybe/Corax CoLAB: [performance improvement]
-
-💡 What: Replaced Pandas `.apply(lambda)` and `.iterrows()` loops with NumPy vectorizations (`np.where`) and list comprehensions.
-🎯 Why: Iterating over DataFrame rows sequentially is a well-known Pandas anti-pattern that creates significant Python-level overhead (especially for string formatting and conditional logic).
-📊 Impact: Expected performance improvement is massive for the refactored operations (up to 300x faster for conditionals, and roughly 2x faster for string assignments, as verified by the included benchmark scripts). This dramatically reduces CPU cycles during UI render (Ticker) and Alpha Insights data processing.
-🔬 Measurement: Run the new benchmark scripts `benchmarks/benchmark_apply.py` and `benchmarks/benchmark_iterrows.py` to verify the execution time differences.
+💡 What: Replaced Python `for` loops with vectorized operations (`numpy.lib.stride_tricks.sliding_window_view`) in data preparation for LSTM and Random Forest models.
+🎯 Why: Python `for` loops scale poorly with large datasets. The original code iterated through the entire dataset to build training sequences manually, causing O(N) Python-level operations per row.
+📊 Impact: Significant reduction in time required for model data preparation for large arrays by leveraging highly optimized C-level code via NumPy vectorization. Eliminates iterative loops.
+🔬 Measurement: Verified functionality using unit tests (`pytest tests/test_models.py` and `pytest tests/test_new_models.py`) and benchmarked the speedup on long arrays.
