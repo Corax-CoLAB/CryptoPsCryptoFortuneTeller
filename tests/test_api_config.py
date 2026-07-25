@@ -9,7 +9,7 @@ from modules.cryptop_crypto_fortune_teller_helper import cg
 
 def test_coingecko_timeout_configuration():
     """
-    Sentinel Security Check:
+
     Verify that CoinGeckoAPI client has a reasonable timeout configured
     to prevent DoS / hanging processes.
     """

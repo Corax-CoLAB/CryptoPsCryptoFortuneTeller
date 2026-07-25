@@ -20,7 +20,7 @@ def check_file_for_requests_timeout(filepath):
 
 def test_requests_timeout():
     """
-    Sentinel Security Check: Ensure all requests.get calls have a timeout.
+Ensure all requests.get calls have a timeout.
     """
     files_to_check = [
         'streamlit_app/cryptop_crypto_fortune_teller_main.py',

@@ -13,7 +13,7 @@ import ccxt
 # Initialize CoinGecko client (public demo API)
 cg = CoinGeckoAPI()
 cg.request_timeout = 20
-cg.request_timeout = 20  # Sentinel: Enforce timeout to prevent hanging
+cg.request_timeout = 20  #Enforce timeout to prevent hanging
 
 def get_session():
     """
@@ -45,7 +45,7 @@ def cg_retry_call(func, *args, retries=3, delay=1, **kwargs):
                 raise e
 
 
-# Sentinel: Prevent Timedelta Overflow (DoS)
+#Prevent Timedelta Overflow (DoS)
 # pandas Timedelta limit is ~106,752 days.
 MAX_HISTORY_DAYS = 20000
 
@@ -58,8 +58,10 @@ def downcast_dtypes(df):
     """
     fcols = df.select_dtypes('float').columns
     icols = df.select_dtypes('integer').columns
-    df[fcols] = df[fcols].apply(pd.to_numeric, downcast='float')
-    df[icols] = df[icols].apply(pd.to_numeric, downcast='integer')
+    for col in fcols:
+        df[col] = pd.to_numeric(df[col], downcast='float')
+    for col in icols:
+        df[col] = pd.to_numeric(df[col], downcast='integer')
     return df
 
 def validate_coin_id(coin_id):
@@ -96,7 +98,7 @@ def _fetch_historical_prices_cached(coin_id, vs_currency='usd', days='max'):
     Uses 'days' as a resolution bucket (1, 90, or 'max') to optimize caching.
     """
     try:
-        # Sentinel: Pass timeout to prevent hanging if supported by wrapper
+        #Pass timeout to prevent hanging if supported by wrapper
         # Using 3 seconds timeout
         try:
              data = cg_retry_call(cg.get_coin_market_chart_by_id, id=coin_id, vs_currency=vs_currency, days=days, timeout=3)
@@ -127,7 +129,7 @@ def get_historical_prices(coin_id, vs_currency='usd', days=365):
     Returns DataFrame with date index and 'close' prices.
     Implements a Tiered Caching Strategy (Bucket 1, 90, or Max) to preserve resolution.
     """
-    # Sentinel: Validate coin_id
+    #Validate coin_id
     if not validate_coin_id(coin_id):
         st.error(f"Invalid coin ID: {coin_id}")
         return pd.DataFrame()
@@ -160,7 +162,7 @@ def get_historical_prices(coin_id, vs_currency='usd', days=365):
 
     try:
         days_int = float(days)
-        # Sentinel: Check bounds to prevent Timedelta overflow/underflow crash
+        #Check bounds to prevent Timedelta overflow/underflow crash
         if days_int > MAX_HISTORY_DAYS or days_int < 0:
             return df
     except (ValueError, TypeError):
@@ -200,7 +202,7 @@ def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
     Returns DataFrame with date index and columns ['open','high','low','close'].
     Implements a Tiered Caching Strategy (Bucket 1, 30, or Max) to preserve resolution while minimizing API calls.
     """
-    # Sentinel: Validate coin_id
+    #Validate coin_id
     if not validate_coin_id(coin_id):
         st.error(f"Invalid coin ID: {coin_id}")
         return pd.DataFrame()
@@ -219,7 +221,7 @@ def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
         fetch_days = 30
     # Tier 3: Max (>30 days) (4 day resolution)
     else:
-        # Sentinel: Public API limits OHLC to 365 days.
+        #Public API limits OHLC to 365 days.
         # Use '365' instead of 'max' to prevent 400 Bad Request.
         fetch_days = 365
 
@@ -233,7 +235,7 @@ def get_historical_ohlc(coin_id, vs_currency='usd', days=30):
     if days == 'max':
         return df
 
-    # Sentinel: Check bounds for days_val (which is already float or max)
+    #Check bounds for days_val (which is already float or max)
     if days_val > MAX_HISTORY_DAYS or days_val < 0:
         return df
 
@@ -259,7 +261,7 @@ def compute_volatility(df, window=14):
     # Compute ATR if high/low available
     if 'high' in df and 'low' in df:
         # Optimization: Use numpy for element-wise operations instead of pandas concat/apply
-        # ⚡ Bolt Optimization: Replaced pd.concat(...).max(axis=1) with np.fmax
+        #Replaced pd.concat(...).max(axis=1) with np.fmax
         # Speedup: ~2.8x faster
         h = df['high'].values.astype(float)
         l = df['low'].values.astype(float)
@@ -346,7 +348,7 @@ def get_coin_metrics(coin_id):
     Fetch additional metrics for a coin: community and developer data.
     Uses CoinGecko API to get community (social) and developer stats.
     """
-    # Sentinel: Validate coin_id
+    #Validate coin_id
     if not validate_coin_id(coin_id):
         return {}
 
@@ -380,7 +382,7 @@ def get_coin_market_data(coin_id):
     """
     Fetch market data for a specific coin (price, circulating supply).
     """
-    # Sentinel: Validate coin_id
+    #Validate coin_id
     if not validate_coin_id(coin_id):
         return {}
 
@@ -405,7 +407,7 @@ def get_fear_and_greed_index():
     """
     url = "https://api.alternative.me/fng/"
     try:
-        # Sentinel: Added User-Agent, extended timeout, and status check
+        #Added User-Agent, extended timeout, and status check
         headers = {'User-Agent': 'CryptoPsFortuneTeller/1.0'}
         r = req_session.get(url, headers=headers, timeout=20)
         r.raise_for_status()
@@ -594,7 +596,7 @@ def get_batch_historical_prices(coin_ids: list, days: int = 90) -> pd.DataFrame:
     Fetch historical prices for multiple coins and return a combined DataFrame.
     Uses concurrent requests to speed up fetching.
     """
-    # 🛡️ Sentinel: Limit batch size to prevent API abuse/DoS
+    #Limit batch size to prevent API abuse/DoS
     MAX_BATCH_SIZE = 10
 
     if not coin_ids:
@@ -696,7 +698,7 @@ def calculate_cci(df, period=20):
     tp = (df['high'] + df['low'] + df['close']) / 3
     sma_tp = tp.rolling(period).mean()
 
-    # ⚡ Bolt Optimization: Vectorized MAD calculation using numpy sliding_window_view
+    #Vectorized MAD calculation using numpy sliding_window_view
     # Speedup: ~30x faster than pd.rolling().apply()
     from numpy.lib.stride_tricks import sliding_window_view
     tp_vals = tp.values
@@ -992,7 +994,7 @@ def calculate_roi(initial_investment, initial_price, current_price):
     current_value = amount_bought * current_price
     profit = current_value - initial_investment
 
-    # Sentinel: Prevent division by zero
+    #Prevent division by zero
     if initial_investment == 0:
         return current_value, 0.0
 
@@ -1005,11 +1007,11 @@ def calculate_moon_math(current_price, current_supply, target_market_cap):
     Calculate price required to reach a target market cap.
     """
     if current_supply == 0:
-        return 0, 0 # Sentinel: Return tuple to match expected unpacking
+        return 0, 0 #Return tuple to match expected unpacking
 
     target_price = target_market_cap / current_supply
 
-    # Sentinel: Prevent division by zero
+    #Prevent division by zero
     if current_price == 0:
         return 0, 0
 
