@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="streamlit_app/assets/logo.png" alt="Crypto P's Crypto Fortune Teller Logo" width="300" style="border-radius: 50%; box-shadow: 0 0 20px #A020F0; margin-bottom: 20px;">
+<img src="streamlit_app/assets/logo.png" alt="Crypto P's Crypto Fortune Teller Logo" width="300" style="border-radius: 50%; box-shadow: 0 0 25px #A020F0; margin-bottom: 25px;">
 
-# 🔮 <span style="color:#A020F0; text-shadow: 0 0 5px #A020F0, 0 0 10px #A020F0, 0 0 20px #FF00FF, 0 0 40px #FF00FF;">Crypto P's Crypto Fortune Teller</span> 🔮
+# <span style="font-size: 2.5em;">🔮</span> <span style="color:#A020F0; text-shadow: 0 0 10px #A020F0, 0 0 20px #FF00FF, 0 0 40px #FF00FF, 0 0 80px #FF00FF; font-weight: 900; letter-spacing: 2px;">Crypto P's Crypto Fortune Teller</span> <span style="font-size: 2.5em;">🔮</span>
 
-**A Psychedelic Cosmic Fortune Teller of AI-Powered Crypto Analytics & Forecasting**
+**A Psychedelic Cosmic Fortune Teller of AI-Powered Crypto Analytics, Advanced Modeling & Forecasting**
 
 <br>
 
@@ -18,18 +18,18 @@
 <br>
 
 <a href="https://cryptop.coraxcolab.com">
-  <img src="https://img.shields.io/badge/🚀_LAUNCH_APP_NOW-FF4B4B?style=for-the-badge&logo=rocket&logoColor=white" alt="Launch App" width="250">
+  <img src="https://img.shields.io/badge/🚀_LAUNCH_APP_NOW-FF4B4B?style=for-the-badge&logo=rocket&logoColor=white" alt="Launch App" width="300" style="box-shadow: 0 0 10px #FF4B4B; border-radius: 5px;">
 </a>
 
 <br><br>
 
-<img src="streamlit_app/assets/crypto.gif" alt="Crypto Animation" width="700" style="border-radius: 10px; box-shadow: 0px 4px 15px rgba(160, 32, 240, 0.5);">
+<img src="streamlit_app/assets/crypto.gif" alt="Crypto Animation" width="800" style="border-radius: 12px; box-shadow: 0px 8px 25px rgba(160, 32, 240, 0.7); margin-bottom: 20px;">
 
 <br>
 
 ### ✨ *Peer into the misty future of cryptocurrency prices with advanced machine learning, real-time data, and deep technical analysis.* ✨
 
-<hr style="border: 1px solid #A020F0;">
+<hr style="border: 2px solid #A020F0; border-radius: 2px; width: 85%;">
 
 </div>
 
@@ -40,7 +40,7 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 <br>
 
 <details>
-<summary><b><h3 style="display:inline-block; cursor:pointer;">🚀 Recent Enhancements</h3></b></summary>
+<summary><b><h3 style="display:inline-block; cursor:pointer; color: #FF00FF;">🚀 Recent Enhancements</h3></b></summary>
 <br>
 <ul>
   <li><b>Robust API Session Management:</b> Implemented a robust `requests.Session` with retry logic and exponential backoff for PyCoinGecko to handle rate limits and transient network errors (Technical Improvement).</li>
@@ -59,7 +59,7 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 <br>
 
 <details>
-<summary><b><h3 style="display:inline-block; cursor:pointer;">🧠 AI-Powered Forecasting</h3></b></summary>
+<summary><b><h3 style="display:inline-block; cursor:pointer; color: #00FFFF;">🧠 AI-Powered Forecasting</h3></b></summary>
 <br>
 <ul>
   <li><b>Prophet Model:</b> Utilizes Facebook's Prophet model for accurate time-series forecasting, capturing seasonality and trends with confidence intervals.</li>
@@ -73,7 +73,7 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 </details>
 
 <details>
-<summary><b><h3 style="display:inline-block; cursor:pointer;">📈 Advanced Technical Analysis</h3></b></summary>
+<summary><b><h3 style="display:inline-block; cursor:pointer; color: #FFFF00;">📈 Advanced Technical Analysis</h3></b></summary>
 <br>
 <ul>
   <li><b>Interactive Candlestick Charts:</b> Zoom, pan, and analyze price action across multiple timeframes.</li>
@@ -84,7 +84,7 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 </details>
 
 <details>
-<summary><b><h3 style="display:inline-block; cursor:pointer;">🤖 Automated Trading & Exchanges</h3></b></summary>
+<summary><b><h3 style="display:inline-block; cursor:pointer; color: #FF4500;">🤖 Automated Trading & Exchanges</h3></b></summary>
 <br>
 <ul>
   <li><b>CCXT Integration:</b> Direct connectivity to Bitget, Gate, Bybit, OKX, KuCoin, and Binance.</li>
@@ -94,7 +94,7 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 </details>
 
 <details>
-<summary><b><h3 style="display:inline-block; cursor:pointer;">🧪 Strategy Backtesting</h3></b></summary>
+<summary><b><h3 style="display:inline-block; cursor:pointer; color: #1E90FF;">🧪 Strategy Backtesting</h3></b></summary>
 <br>
 <ul>
   <li><b>Simulation Engine:</b> Test trading strategies against historical data (e.g., SMA Crossover, RSI Mean Reversion, Bollinger Squeeze, MACD Crossover).</li>
@@ -103,7 +103,7 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 </details>
 
 <details>
-<summary><b><h3 style="display:inline-block; cursor:pointer;">💼 Portfolio & Market Tools</h3></b></summary>
+<summary><b><h3 style="display:inline-block; cursor:pointer; color: #32CD32;">💼 Portfolio & Market Tools</h3></b></summary>
 <br>
 <ul>
   <li><b>Portfolio Tracker:</b> Monitor your holdings, track PnL, view allocation pie charts, and project future wealth.</li>
@@ -116,7 +116,7 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 </details>
 
 <details>
-<summary><b><h3 style="display:inline-block; cursor:pointer;">💎 Alpha Insights: Institutional-Grade Intelligence</h3></b></summary>
+<summary><b><h3 style="display:inline-block; cursor:pointer; color: #00FF00;">💎 Alpha Insights: Institutional-Grade Intelligence</h3></b></summary>
 <br>
 <ul>
   <li><b>🐋 On-Chain Whale Tracker & Anomaly Detection:</b> Detect anomalous volume spikes indicative of institutional or whale accumulation/distribution.</li>
@@ -129,6 +129,7 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 
 <br>
 
+
 <div align="center">
 <hr style="border: 1px solid #A020F0; width: 80%;">
 </div>
@@ -136,18 +137,18 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 ## 📸 A Glimpse into the Magic
 
 <div align="center">
-  <img src="assets/screenshot1.png" alt="Dashboard View" width="48%" style="border-radius: 8px; margin: 1%;">
-  <img src="assets/screenshot1.png" alt="Technical Analysis" width="48%" style="border-radius: 8px; margin: 1%;">
+  <img src="streamlit_app/assets/screenshot_1.png" alt="Dashboard View" width="48%" style="border-radius: 8px; margin: 1%;">
+  <img src="streamlit_app/assets/screenshot_2.png" alt="Technical Analysis" width="48%" style="border-radius: 8px; margin: 1%;">
   <br>
-  <img src="assets/screenshot1.png" alt="Machine Learning Models" width="48%" style="border-radius: 8px; margin: 1%;">
-  <img src="assets/screenshot1.png" alt="Portfolio Management" width="48%" style="border-radius: 8px; margin: 1%;">
+  <img src="streamlit_app/assets/screenshot_3.png" alt="Machine Learning Models" width="48%" style="border-radius: 8px; margin: 1%;">
+  <img src="streamlit_app/assets/screenshot_4.png" alt="Portfolio Management" width="48%" style="border-radius: 8px; margin: 1%;">
 </div>
 
 <br>
-
 <div align="center">
 <hr style="border: 1px solid #A020F0; width: 80%;">
 </div>
+
 
 ## 👨‍💻 Meet the Mastermind
 
@@ -155,29 +156,30 @@ Welcome to **Crypto P's Crypto Fortune Teller**, an interactive, stunningly desi
 
 This masterpiece of crypto-analytical software was conjured by **Pelle Nyberg** at **Corax CoLAB**.
 
-<img src="https://github.com/PelleNybe.png" alt="Pelle Nyberg" width="150" style="border-radius: 50%; border: 4px solid #A020F0; box-shadow: 0 0 15px #FF00FF; margin: 20px;">
+<a href="https://github.com/PelleNybe">
+  <img src="https://github.com/PelleNybe.png" alt="Pelle Nyberg" width="180" style="border-radius: 50%; border: 5px solid #A020F0; box-shadow: 0 0 25px #FF00FF; margin: 25px;">
+</a>
 
 ### **Pelle Nyberg**
-*Visionary Software Engineer & Crypto Analyst*
+<span style="font-size: 1.2em; font-style: italic; color: #A020F0; text-shadow: 0 0 2px #A020F0;">Visionary Software Engineer & Crypto Analyst</span>
 
 <a href="https://github.com/PelleNybe"><img src="https://img.shields.io/badge/GitHub-PelleNybe-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
 <a href="https://www.linkedin.com/in/pellenyberg/"><img src="https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
 <a href="https://pellenybe.github.io"><img src="https://img.shields.io/badge/Portfolio-Visit_Site-005571?style=for-the-badge&logo=firefox&logoColor=white" alt="Portfolio"></a>
+<a href="https://cryptop.coraxcolab.com"><img src="https://img.shields.io/badge/Crypto_P-Live_App-A020F0?style=for-the-badge&logo=streamlit&logoColor=white" alt="Crypto P App"></a>
 
 <br><br>
 
 ### **Corax CoLAB**
-*Innovating the Digital Frontier*
+<span style="font-size: 1.2em; font-style: italic; color: #00FFFF; text-shadow: 0 0 2px #00FFFF;">Innovating the Digital Frontier</span>
 
-<a href="https://coraxcolab.com"><img src="https://img.shields.io/badge/Corax_CoLAB-Website-FF6B6B?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Corax CoLAB"></a>
-<a href="https://cryptop.coraxcolab.com"><img src="https://img.shields.io/badge/Crypto_P-Live_App-A020F0?style=for-the-badge&logo=streamlit&logoColor=white" alt="Crypto P App"></a>
+<a href="https://coraxcolab.com"><img src="https://img.shields.io/badge/Corax_CoLAB-Official_Website-FF6B6B?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Corax CoLAB"></a>
 
-<br>
+<br><br>
 <i>Empowering traders and developers with cutting-edge tools and futuristic insights.</i>
 <br><br>
 
 </div>
-
 <div align="center">
 <hr style="border: 1px solid #A020F0; width: 80%;">
 </div>
@@ -199,7 +201,7 @@ We take security seriously. This application includes:
 <br>
 
 <details>
-<summary><b><h3 style="display:inline-block; cursor:pointer;">🛠️ Tech Stack & Dependencies</h3></b></summary>
+<summary><b><h3 style="display:inline-block; cursor:pointer; color: #FF1493;">🛠️ Tech Stack & Dependencies</h3></b></summary>
 <br>
 
 <div align="center">
@@ -222,7 +224,7 @@ We take security seriously. This application includes:
 <br>
 
 <details>
-<summary><b><h3 style="display:inline-block; cursor:pointer;">📂 Project Structure Snapshot</h3></b></summary>
+<summary><b><h3 style="display:inline-block; cursor:pointer; color: #FFA500;">📂 Project Structure Snapshot</h3></b></summary>
 <br>
 
 ```text
@@ -246,7 +248,7 @@ CryptoPsFortuneTeller/
 </details>
 
 <details>
-<summary><b><h3 style="display:inline-block; cursor:pointer;">💎 Alpha Insights: Institutional-Grade Intelligence</h3></b></summary>
+<summary><b><h3 style="display:inline-block; cursor:pointer; color: #00FF00;">💎 Alpha Insights: Institutional-Grade Intelligence</h3></b></summary>
 <br>
 <ul>
   <li><b>🐋 On-Chain Whale Tracker & Anomaly Detection:</b> Detect anomalous volume spikes indicative of institutional or whale accumulation/distribution.</li>
