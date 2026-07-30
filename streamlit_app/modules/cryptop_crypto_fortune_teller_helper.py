@@ -934,7 +934,6 @@ def calculate_parabolic_sar(df, af=0.02, max_af=0.2):
     close = df['close'].values
 
     psar = close.copy()
-    psar_series = pd.Series(index=df.index, dtype=float)
 
     bull = True
     af_val = af
@@ -979,9 +978,8 @@ def calculate_parabolic_sar(df, af=0.02, max_af=0.2):
                     curr_psar = max(curr_psar, high[i-1], high[i-2])
 
         psar[i] = curr_psar
-        psar_series.iloc[i] = curr_psar
 
-    return psar_series
+    return pd.Series(psar, index=df.index)
 
 def calculate_roi(initial_investment, initial_price, current_price):
     """
