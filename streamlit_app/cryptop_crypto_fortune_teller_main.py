@@ -851,11 +851,11 @@ with tab5:
                 if st.button("Yes, Clear Everything", type="primary"):
                     st.session_state.portfolio = []
                     st.session_state.confirm_clear_portfolio = False
-                    st.experimental_rerun()
+                    st.rerun()
             with col_conf_no:
                 if st.button("Cancel"):
                     st.session_state.confirm_clear_portfolio = False
-                    st.experimental_rerun()
+                    st.rerun()
 
         # Future Wealth Projection
         st.markdown("---")
@@ -1234,12 +1234,12 @@ with tab9:
                 st.session_state.exchange_connected = False
                 exchange_client = ExchangeManager() # Reset the instance
                 get_exchange_vault.clear() # Clear cache for this resource
-                st.experimental_rerun()
+                st.rerun()
 
             # Balance
             st.write("#### 💰 Wallet Balance")
             if st.button("Refresh Balance"):
-                st.experimental_rerun()
+                st.rerun()
 
             bal_df, bal_err = exchange_client.get_balance()
             if bal_df is not None and not bal_df.empty:
@@ -1286,7 +1286,7 @@ with tab9:
             st.markdown("---")
             with st.expander("Open Orders"):
                 if st.button("Refresh Orders"):
-                    st.experimental_rerun()
+                    st.rerun()
                 orders_df, ord_err = exchange_client.fetch_open_orders(t_symbol)
                 if orders_df is not None and not orders_df.empty:
                     st.dataframe(orders_df)
@@ -1405,7 +1405,7 @@ with tab9:
                     else: st.error(msg)
             with col_c3:
                 if st.button("🔄 Refresh Status"):
-                    st.experimental_rerun()
+                    st.rerun()
 
             # Status Dashboard
             status, err = client.get_status()
