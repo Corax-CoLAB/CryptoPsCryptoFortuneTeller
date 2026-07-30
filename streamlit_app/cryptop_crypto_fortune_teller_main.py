@@ -93,7 +93,7 @@ logo_path = "assets/logo.png"
 col1, col2, col3 = st.columns([1, 6, 1])
 with col2:
     try:
-        st.image(logo_path, width=150)
+        st.image(logo_path, width=150, alt="Crypto P's Fortune Teller Logo")
     except:
         st.write("🔮") # Fallback if image missing
     st.markdown("<h1 style='text-align: center; color: #FFD700; text-shadow: 0 0 10px #FF00FF;'>🎪 Crypto P's 🔮<br>Fortune Teller</h1>", unsafe_allow_html=True)

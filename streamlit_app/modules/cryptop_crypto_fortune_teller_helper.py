@@ -522,9 +522,10 @@ def calculate_backtest(df, strategy_type='SMA Crossover'):
         rsi = calculate_rsi(df)
 
         # Vectorized approach using masking and forward fill
-        signal_series = pd.Series(np.nan, index=rsi.index)
-        signal_series[rsi < 30] = 1.0
-        signal_series[rsi > 70] = 0.0
+        signal_series = pd.Series(
+            np.select([rsi < 30, rsi > 70], [1.0, 0.0], default=np.nan),
+            index=rsi.index
+        )
 
         # Forward fill to propagate the last active signal
         signal_series = signal_series.ffill().fillna(0.0)
@@ -534,10 +535,11 @@ def calculate_backtest(df, strategy_type='SMA Crossover'):
         bb = calculate_bollinger_bands(df)
         if not bb.empty:
             df = df.join(bb)
-            signal_series = pd.Series(np.nan, index=df.index)
             # Breakout signals
-            signal_series[df['close'] > df['B_Upper']] = 1.0
-            signal_series[df['close'] < df['B_Lower']] = 0.0
+            signal_series = pd.Series(
+                np.select([df['close'] > df['B_Upper'], df['close'] < df['B_Lower']], [1.0, 0.0], default=np.nan),
+                index=df.index
+            )
             # Forward fill
             signal_series = signal_series.ffill().fillna(0.0)
 
@@ -547,11 +549,12 @@ def calculate_backtest(df, strategy_type='SMA Crossover'):
         vwap = calculate_vwap(df)
         if not vwap.empty:
             df['vwap'] = vwap
-            signal_series = pd.Series(np.nan, index=df.index)
             # Threshold: 5% below VWAP
             buy_threshold = df['vwap'] * 0.95
-            signal_series[df['close'] < buy_threshold] = 1.0
-            signal_series[df['close'] > df['vwap']] = 0.0
+            signal_series = pd.Series(
+                np.select([df['close'] < buy_threshold, df['close'] > df['vwap']], [1.0, 0.0], default=np.nan),
+                index=df.index
+            )
             # Forward fill
             signal_series = signal_series.ffill().fillna(0.0)
 

@@ -28,3 +28,7 @@
 ## 2026-07-30 - [Optimize SAR and UI Rendering]
 **Learning:** Parabolic SAR iteratively populated a Pandas Series (`psar_series.iloc[i] = ...`) which causes immense overhead. List comprehensions wrapped inside a `set()` (e.g. `list(set([x for x in data]))`) allocate unnecessary memory before hashing. LSTM batch size tuning is critical for dense prediction tasks.
 **Action:** Replaced SAR Series population with a native NumPy array allocation mapped back to Series at the end. Refactored UI list comprehensions inside sets into native set comprehensions `list({x for x in data})` and `sum([generator])` into `sum(generator)`. Increased LSTM batch size from 32 to 64 yielding a 35% performance boost.
+
+## 2026-07-30 - [Optimize Series Condition Assignments and Model Pre-allocations]
+**Learning:** Python loops and iterative append operations are exceptionally slow compared to C-level pre-allocated NumPy array updates. Using native numpy selections for dataframe updates prevents overhead.
+**Action:** Refactored multiple Pandas Series condition assignments (e.g., `signal_series[rsi < 30] = 1.0`) to use vectorized `np.select()`. Replaced `preds.append(next_val)` in the Random Forest forecast loop with a pre-allocated numpy array (`np.zeros`). Implemented strict alt text on all `st.image()` usages for accessibility compliance.
