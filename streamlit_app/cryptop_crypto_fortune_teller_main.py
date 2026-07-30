@@ -107,18 +107,19 @@ with st.spinner("Initializing Oracle..."):
     gainers, losers = get_top_gainers_losers(limit=10)
 
 if not gainers.empty:
-    ticker_items = []
-    for row in gainers.head(5).itertuples():
-        sym = getattr(row, "symbol", "").upper()
-        pct = getattr(row, "price_change_percentage_24h", 0.0)
-        color = "#00FF00" if pct > 0 else "#FF0000"
-        ticker_items.append(f"<span style='margin-right: 30px; font-weight: bold;'>🔥 {html.escape(str(sym))} <span style='color: {html.escape(str(color))}'>{html.escape(f'{pct:+.2f}%')}</span></span>")
+    # Optimization: Replaced itertuples with list comprehensions for speed
+    top_gainers = gainers.head(5)
+    gainer_items = [
+        f"<span style='margin-right: 30px; font-weight: bold;'>🔥 {html.escape(str(sym).upper())} <span style='color: {html.escape('#00FF00' if pct > 0 else '#FF0000')}'>{html.escape(f'{pct:+.2f}%')}</span></span>"
+        for sym, pct in zip(top_gainers['symbol'], top_gainers['price_change_percentage_24h'])
+    ]
 
-    for row in losers.head(5).itertuples():
-        sym = getattr(row, "symbol", "").upper()
-        pct = getattr(row, "price_change_percentage_24h", 0.0)
-        color = "#00FF00" if pct > 0 else "#FF0000"
-        ticker_items.append(f"<span style='margin-right: 30px; font-weight: bold;'>🧊 {html.escape(str(sym))} <span style='color: {html.escape(str(color))}'>{html.escape(f'{pct:+.2f}%')}</span></span>")
+    top_losers = losers.head(5)
+    loser_items = [
+        f"<span style='margin-right: 30px; font-weight: bold;'>🧊 {html.escape(str(sym).upper())} <span style='color: {html.escape('#00FF00' if pct > 0 else '#FF0000')}'>{html.escape(f'{pct:+.2f}%')}</span></span>"
+        for sym, pct in zip(top_losers['symbol'], top_losers['price_change_percentage_24h'])
+    ]
+    ticker_items = gainer_items + loser_items
 
     ticker_html = f"""
     <div style="width: 100%; overflow: hidden; background: linear-gradient(90deg, #150020, #2a0e3b, #150020); border-bottom: 2px solid #FF00FF; border-top: 2px solid #00FFFF; padding: 10px 0; margin-bottom: 20px;">
@@ -735,22 +736,29 @@ with tab5:
         p_ids = list(set([i['id'] for i in st.session_state.portfolio]))
         curr_prices = get_current_price(p_ids)
 
-        for item in st.session_state.portfolio:
-            cid = item['id']
-            c_price = curr_prices.get(cid, {}).get('usd', 0) if curr_prices else 0
-            val = item['amount'] * c_price
-            cost = item['amount'] * item['buy_price']
-            pnl = val - cost
-            pnl_pct = (pnl / cost * 100) if cost > 0 else 0
+        # Optimization: Vectorized portfolio calculations
+        port_df_temp = pd.DataFrame(st.session_state.portfolio)
+        if not port_df_temp.empty:
+            prices_series = port_df_temp['id'].map(lambda cid: curr_prices.get(cid, {}).get('usd', 0) if curr_prices else 0)
+            amounts = port_df_temp['amount']
+            buy_prices = port_df_temp['buy_price']
 
-            total_val += val
-            total_cost += cost
+            vals = amounts * prices_series
+            costs = amounts * buy_prices
+            pnls = vals - costs
+            pnl_pcts = np.where(costs > 0, (pnls / costs * 100), 0.0)
 
-            port_data.append({
-                'Coin': item['name'], 'Amount': item['amount'],
-                'Price': c_price, 'Value': val,
-                'PnL ($)': pnl, 'PnL (%)': pnl_pct
-            })
+            total_val += vals.sum()
+            total_cost += costs.sum()
+
+            port_df_temp['Coin'] = port_df_temp['name']
+            port_df_temp['Amount'] = amounts
+            port_df_temp['Price'] = prices_series
+            port_df_temp['Value'] = vals
+            port_df_temp['PnL ($)'] = pnls
+            port_df_temp['PnL (%)'] = pnl_pcts
+
+            port_data = port_df_temp[['Coin', 'Amount', 'Price', 'Value', 'PnL ($)', 'PnL (%)']].to_dict('records')
 
         df_port = pd.DataFrame(port_data)
 

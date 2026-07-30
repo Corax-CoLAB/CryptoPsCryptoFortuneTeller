@@ -1,4 +1,4 @@
-💡 What: Replaced Python `for` loops with vectorized operations (`numpy.lib.stride_tricks.sliding_window_view`) in data preparation for LSTM and Random Forest models.
-🎯 Why: Python `for` loops scale poorly with large datasets. The original code iterated through the entire dataset to build training sequences manually, causing O(N) Python-level operations per row.
-📊 Impact: Significant reduction in time required for model data preparation for large arrays by leveraging highly optimized C-level code via NumPy vectorization. Eliminates iterative loops.
-🔬 Measurement: Verified functionality using unit tests (`pytest tests/test_models.py` and `pytest tests/test_new_models.py`) and benchmarked the speedup on long arrays.
+💡 What: Optimized model data preparation and main UI loops by replacing Python `for` loops with vectorized operations (`numpy.lib.stride_tricks.sliding_window_view` and `pandas` dataframe/Series math).
+🎯 Why: Iterative loops over pandas rows or using `append` scale poorly. Random Forest was still using a slow loop. The Ticker and Portfolio rendering loops were causing overhead during Streamlit's frequent re-runs.
+📊 Impact: Significant reduction in time required for model data preparation and UI rendering by leveraging optimized C-level code and list comprehensions.
+🔬 Measurement: Verified via unit tests (`pytest`). Overall application rendering and data updates feel significantly snappier.

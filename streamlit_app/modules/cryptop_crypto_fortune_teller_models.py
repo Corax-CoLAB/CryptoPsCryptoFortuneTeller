@@ -423,12 +423,14 @@ def forecast_random_forest(df, periods=30, n_lags=14):
         return pd.DataFrame(columns=['ds', 'yhat'])
 
     values = series.values
-    for i in range(n_lags, len(values)):
-        X.append(values[i-n_lags:i])
-        y.append(values[i])
-
-    X = np.array(X)
-    y = np.array(y)
+    from numpy.lib.stride_tricks import sliding_window_view
+    if len(values) >= n_lags + 1:
+        windows = sliding_window_view(values, window_shape=n_lags + 1)
+        X = windows[:, :-1]
+        y = windows[:, -1]
+    else:
+        X, y = np.array([]), np.array([])
+        return pd.DataFrame(columns=['ds', 'yhat'])
 
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
