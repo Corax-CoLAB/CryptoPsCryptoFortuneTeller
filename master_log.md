@@ -17,3 +17,7 @@
 ## 2026-07-25 - [Optimize LSTM and RF Data Preparation using Vectorization]
 **Learning:** Using Python `for` loops to iterate over datasets to create sliding windows for models like LSTM and Random Forest is slow and doesn't scale well with large datasets.
 **Action:** Replaced the Python `for` loops in `forecast_lstm` and `forecast_random_forest` with fully vectorized data preparation using `numpy.lib.stride_tricks.sliding_window_view`. This delegates the window generation to C-level NumPy code, resulting in faster and more efficient data preprocessing.
+
+## 2026-07-27 - [Optimize Ticker and Portfolio UI with Vectorization]
+**Learning:** `itertuples()` and `append` loops for rendering UI elements like Tickers and Portfolios are slower than vectorized strings or pandas dataframes.
+**Action:** Replaced iterative loops in `streamlit_app/cryptop_crypto_fortune_teller_main.py` with fast list comprehensions (`zip()`) for the ticker and pandas vectorized operations (`np.where`, Series operations) for the portfolio value calculations.
