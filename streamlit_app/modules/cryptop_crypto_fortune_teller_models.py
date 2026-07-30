@@ -366,7 +366,7 @@ def forecast_lstm(df, periods=30, n_steps=60):
     # Early stopping
     early_stop = EarlyStopping(monitor='loss', patience=5, restore_best_weights=True)
 
-    model.fit(X, y, epochs=20, batch_size=32, verbose=0, callbacks=[early_stop])
+    model.fit(X, y, epochs=20, batch_size=64, verbose=0, callbacks=[early_stop])
 
     forecast_input = series_scaled[-n_steps:].reshape(1, n_steps, 1).astype(np.float32)
     preds = np.zeros(periods, dtype=np.float32)

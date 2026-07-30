@@ -733,7 +733,7 @@ with tab5:
         total_val = 0
         total_cost = 0
 
-        p_ids = list(set([i['id'] for i in st.session_state.portfolio]))
+        p_ids = list({i['id'] for i in st.session_state.portfolio})
         curr_prices = get_current_price(p_ids)
 
         # Optimization: Vectorized portfolio calculations
@@ -870,13 +870,13 @@ with tab5:
         st.subheader("🔮 Future Wealth Projection")
         st.write("Estimate the future value of your assets based on AI forecasts (30-day horizon).")
 
-        port_options = list(set([item['name'] for item in st.session_state.portfolio]))
+        port_options = list({item['name'] for item in st.session_state.portfolio})
         if port_options:
             selected_port_asset = st.selectbox("Select Asset to Project", port_options, key="port_forecast_select")
 
             # Find asset details (sum amount if multiple entries)
             # Simple approach: sum amount for this coin
-            total_amt = sum([i['amount'] for i in st.session_state.portfolio if i['name'] == selected_port_asset])
+            total_amt = sum(i['amount'] for i in st.session_state.portfolio if i['name'] == selected_port_asset)
             asset_id = next((i['id'] for i in st.session_state.portfolio if i['name'] == selected_port_asset), None)
 
             if asset_id and total_amt > 0:
