@@ -436,12 +436,12 @@ def forecast_random_forest(df, periods=30, n_lags=14):
     model.fit(X, y)
 
     # Recursive Forecasting
-    preds = []
+    preds = np.zeros(periods)
     current_lag = values[-n_lags:]
 
-    for _ in range(periods):
+    for i in range(periods):
         next_val = model.predict(current_lag.reshape(1, -1))[0]
-        preds.append(next_val)
+        preds[i] = next_val
         # Shift and append
         current_lag = np.append(current_lag[1:], next_val)
 
@@ -465,35 +465,24 @@ def forecast_general_ensemble(df, model_names, periods=30, sentiment_score=0.0, 
         model_names = ["Prophet (Standard)"]
 
     forecasts = []
-
     # Dispatcher
     for name in model_names:
         f = pd.DataFrame()
-
         if "Prophet" in name:
-            # Map name to config key
             p_name = name.replace("Prophet (", "").replace(")", "")
-            # If name was just "Prophet", default to Standard
             if p_name == "Prophet": p_name = "Standard"
-
-            # Use internal prophet runner
             config = get_prophet_config(p_name, overrides=model_params)
             f = _run_prophet_model(df, config, periods)
-
         elif name == "LSTM":
             f = forecast_lstm(df, periods)
-
         elif name == "ARIMA":
             f = forecast_arima(df, periods)
-
         elif name == "SARIMA":
             f = forecast_sarima(df, periods)
-
         elif name == "Random Forest":
             f = forecast_random_forest(df, periods)
 
         if not f.empty:
-            # Ensure columns exist (LSTM/RF might miss lower/upper)
             if 'yhat_lower' not in f.columns: f['yhat_lower'] = f['yhat']
             if 'yhat_upper' not in f.columns: f['yhat_upper'] = f['yhat']
             forecasts.append(f)
@@ -503,13 +492,10 @@ def forecast_general_ensemble(df, model_names, periods=30, sentiment_score=0.0, 
 
     # Standardize to Future Only (last 'periods' rows)
     # This ensures we can average Prophet (History+Future) with ARIMA/LSTM (Future Only)
-    processed_forecasts = []
-    for f in forecasts:
-        if len(f) > periods:
-            # Assume the future is at the end
-            processed_forecasts.append(f.iloc[-periods:].reset_index(drop=True))
-        else:
-            processed_forecasts.append(f.reset_index(drop=True))
+    processed_forecasts = [
+        f.iloc[-periods:].reset_index(drop=True) if len(f) > periods else f.reset_index(drop=True)
+        for f in forecasts
+    ]
 
     # Average results
     base = processed_forecasts[0].copy()
