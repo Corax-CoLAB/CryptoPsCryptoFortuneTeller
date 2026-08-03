@@ -1118,9 +1118,8 @@ def get_exchange_arbitrage(symbol_str):
 
     import concurrent.futures
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(exchanges)) as executor:
-        results = list(executor.map(fetch_ticker, exchanges))
-
-    data = [r for r in results if r and r.get('Price') is not None]
+        results = executor.map(fetch_ticker, exchanges)
+        data = [r for r in results if r and r.get('Price') is not None]
 
     if not data:
         return pd.DataFrame()
