@@ -634,9 +634,7 @@ def get_batch_historical_prices(coin_ids: list, days: int = 90) -> pd.DataFrame:
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         # map returns an iterator that yields results in the order calls were submitted
         results = executor.map(fetch_price, coin_ids)
-        for df in results:
-            if df is not None:
-                dfs.append(df)
+        dfs = [df for df in results if df is not None]
 
     if not dfs:
         return pd.DataFrame()
@@ -936,7 +934,8 @@ def calculate_parabolic_sar(df, af=0.02, max_af=0.2):
     low = df['low'].values
     close = df['close'].values
 
-    psar = close.copy()
+    # Pre-allocate numpy array instead of pandas series for speed
+    psar = np.zeros(len(df), dtype=float)
 
     bull = True
     af_val = af
@@ -1337,8 +1336,7 @@ def get_crypto_news_sentiment(limit=10):
         r.raise_for_status()
         data = r.json().get('Data', [])[:limit]
 
-        news_data = []
-        for item in data:
+        def process_news_item(item):
             title = item.get('title', '')
             body = item.get('body', '')
             url = item.get('url', '')
@@ -1348,20 +1346,22 @@ def get_crypto_news_sentiment(limit=10):
             blob = TextBlob(title + " " + body)
             polarity = blob.sentiment.polarity
 
-            sentiment_label = "Neutral 😐"
             if polarity > 0.2:
                 sentiment_label = "Bullish 🚀"
             elif polarity < -0.2:
                 sentiment_label = "Bearish 📉"
+            else:
+                sentiment_label = "Neutral 😐"
 
-            news_data.append({
+            return {
                 'Source': source,
                 'Title': title,
                 'Sentiment': sentiment_label,
                 'Score': round(polarity, 2),
                 'URL': url
-            })
+            }
 
+        news_data = [process_news_item(item) for item in data]
         return pd.DataFrame(news_data)
     except Exception as e:
         import logging
