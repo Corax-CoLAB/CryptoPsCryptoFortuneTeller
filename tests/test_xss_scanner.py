@@ -102,7 +102,7 @@ def test_xss_prevention():
 
 def test_scanner_logic():
     """
-    Sentinel Self-Verification: Ensure scanner detects new patterns.
+Self-Verification: Ensure scanner detects new patterns.
     """
     code = """
 import streamlit as st

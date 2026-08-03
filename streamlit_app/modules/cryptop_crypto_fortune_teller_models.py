@@ -41,7 +41,7 @@ def get_best_arima(series, max_p=3, max_q=3, d=1):
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# 🛡️ Sentinel: DoS Protection Limits
+#DoS Protection Limits
 MAX_FORECAST_HORIZON = 365
 MAX_HISTORY_LENGTH = 2000
 
@@ -186,7 +186,7 @@ def _run_prophet_model(df, config, periods=30):
     """
     Wrapper around _run_prophet_model_fixed to slice the result.
     """
-    # 🛡️ Sentinel: Enforce Input Limits
+    #Enforce Input Limits
     if periods > MAX_FORECAST_HORIZON:
         logging.warning(f"Prophet: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
         periods = MAX_FORECAST_HORIZON
@@ -209,7 +209,7 @@ def forecast_arima(df, periods=30):
     """
     Forecast using ARIMA model (Auto-Regressive Integrated Moving Average).
     """
-    # 🛡️ Sentinel: Enforce Input Limits
+    #Enforce Input Limits
     if periods > MAX_FORECAST_HORIZON:
         logging.warning(f"ARIMA: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
         periods = MAX_FORECAST_HORIZON
@@ -261,7 +261,7 @@ def forecast_sarima(df, periods=30):
     """
     Forecast using SARIMA model (Seasonal ARIMA).
     """
-    # 🛡️ Sentinel: Enforce Input Limits
+    #Enforce Input Limits
     if periods > MAX_FORECAST_HORIZON:
         logging.warning(f"SARIMA: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
         periods = MAX_FORECAST_HORIZON
@@ -310,7 +310,7 @@ def forecast_lstm(df, periods=30, n_steps=60):
     Accepts DataFrame with date index and 'close' column.
     Returns DataFrame with 'ds' and 'yhat'.
     """
-    # 🛡️ Sentinel: Enforce Input Limits
+    #Enforce Input Limits
     if periods > MAX_FORECAST_HORIZON:
         logging.warning(f"LSTM: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
         periods = MAX_FORECAST_HORIZON
@@ -334,12 +334,17 @@ def forecast_lstm(df, periods=30, n_steps=60):
     scaler = MinMaxScaler()
     series_scaled = scaler.fit_transform(series.reshape(-1,1))
 
-    X, y = [], []
-    for i in range(n_steps, len(series_scaled)):
-        X.append(series_scaled[i-n_steps:i, 0])
-        y.append(series_scaled[i, 0])
+    # Optimization: Replaced Python loop with NumPy sliding_window_view for data prep
+    # Expected Impact: Significant speedup in LSTM data preparation for large datasets
+    from numpy.lib.stride_tricks import sliding_window_view
+    series_1d = series_scaled[:, 0]
 
-    X, y = np.array(X), np.array(y)
+    if len(series_1d) >= n_steps + 1:
+        windows = sliding_window_view(series_1d, window_shape=n_steps + 1)
+        X = windows[:, :-1]
+        y = windows[:, -1]
+    else:
+        X, y = np.array([]), np.array([])
 
     if len(X) == 0:
          return pd.DataFrame(columns=['ds', 'yhat'])
@@ -361,7 +366,7 @@ def forecast_lstm(df, periods=30, n_steps=60):
     # Early stopping
     early_stop = EarlyStopping(monitor='loss', patience=5, restore_best_weights=True)
 
-    model.fit(X, y, epochs=20, batch_size=32, verbose=0, callbacks=[early_stop])
+    model.fit(X, y, epochs=20, batch_size=64, verbose=0, callbacks=[early_stop])
 
     forecast_input = series_scaled[-n_steps:].reshape(1, n_steps, 1).astype(np.float32)
     preds = np.zeros(periods, dtype=np.float32)
@@ -391,7 +396,7 @@ def forecast_random_forest(df, periods=30, n_lags=14):
     """
     Forecast using Random Forest Regressor.
     """
-    # 🛡️ Sentinel: Enforce Input Limits
+    #Enforce Input Limits
     if periods > MAX_FORECAST_HORIZON:
         logging.warning(f"RF: periods {periods} clamped to {MAX_FORECAST_HORIZON}")
         periods = MAX_FORECAST_HORIZON
@@ -418,23 +423,25 @@ def forecast_random_forest(df, periods=30, n_lags=14):
         return pd.DataFrame(columns=['ds', 'yhat'])
 
     values = series.values
-    for i in range(n_lags, len(values)):
-        X.append(values[i-n_lags:i])
-        y.append(values[i])
-
-    X = np.array(X)
-    y = np.array(y)
+    from numpy.lib.stride_tricks import sliding_window_view
+    if len(values) >= n_lags + 1:
+        windows = sliding_window_view(values, window_shape=n_lags + 1)
+        X = windows[:, :-1]
+        y = windows[:, -1]
+    else:
+        X, y = np.array([]), np.array([])
+        return pd.DataFrame(columns=['ds', 'yhat'])
 
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
 
     # Recursive Forecasting
-    preds = []
+    preds = np.zeros(periods)
     current_lag = values[-n_lags:]
 
-    for _ in range(periods):
+    for i in range(periods):
         next_val = model.predict(current_lag.reshape(1, -1))[0]
-        preds.append(next_val)
+        preds[i] = next_val
         # Shift and append
         current_lag = np.append(current_lag[1:], next_val)
 
@@ -458,35 +465,24 @@ def forecast_general_ensemble(df, model_names, periods=30, sentiment_score=0.0, 
         model_names = ["Prophet (Standard)"]
 
     forecasts = []
-
     # Dispatcher
     for name in model_names:
         f = pd.DataFrame()
-
         if "Prophet" in name:
-            # Map name to config key
             p_name = name.replace("Prophet (", "").replace(")", "")
-            # If name was just "Prophet", default to Standard
             if p_name == "Prophet": p_name = "Standard"
-
-            # Use internal prophet runner
             config = get_prophet_config(p_name, overrides=model_params)
             f = _run_prophet_model(df, config, periods)
-
         elif name == "LSTM":
             f = forecast_lstm(df, periods)
-
         elif name == "ARIMA":
             f = forecast_arima(df, periods)
-
         elif name == "SARIMA":
             f = forecast_sarima(df, periods)
-
         elif name == "Random Forest":
             f = forecast_random_forest(df, periods)
 
         if not f.empty:
-            # Ensure columns exist (LSTM/RF might miss lower/upper)
             if 'yhat_lower' not in f.columns: f['yhat_lower'] = f['yhat']
             if 'yhat_upper' not in f.columns: f['yhat_upper'] = f['yhat']
             forecasts.append(f)
@@ -496,13 +492,10 @@ def forecast_general_ensemble(df, model_names, periods=30, sentiment_score=0.0, 
 
     # Standardize to Future Only (last 'periods' rows)
     # This ensures we can average Prophet (History+Future) with ARIMA/LSTM (Future Only)
-    processed_forecasts = []
-    for f in forecasts:
-        if len(f) > periods:
-            # Assume the future is at the end
-            processed_forecasts.append(f.iloc[-periods:].reset_index(drop=True))
-        else:
-            processed_forecasts.append(f.reset_index(drop=True))
+    processed_forecasts = [
+        f.iloc[-periods:].reset_index(drop=True) if len(f) > periods else f.reset_index(drop=True)
+        for f in forecasts
+    ]
 
     # Average results
     base = processed_forecasts[0].copy()

@@ -16,7 +16,7 @@ def get_helper_module():
 
 def test_get_historical_prices_dos_prevention():
     """
-    Sentinel Security Test:
+
     Verify that get_historical_prices handles large 'days' values gracefully
     without raising OutOfBoundsTimedelta or OverflowError (DoS prevention).
     """
@@ -38,7 +38,7 @@ def test_get_historical_prices_dos_prevention():
         # We must patch the function on the RELOADED module object
         with patch.object(helper, '_fetch_historical_prices_cached') as mock_fetch:
             # Create a dummy dataframe with some history
-            # Sentinel: Ensure naive timestamps
+            #Ensure naive timestamps
             dates = pd.date_range(end=pd.Timestamp.now('UTC').replace(tzinfo=None), periods=100)
             df = pd.DataFrame({'close': range(100)}, index=dates)
             mock_fetch.return_value = df
@@ -63,7 +63,7 @@ def test_get_historical_prices_dos_prevention():
 
 def test_get_historical_ohlc_dos_prevention():
     """
-    Sentinel Security Test:
+
     Verify that get_historical_ohlc handles large 'days' values gracefully.
     """
     mock_st = MagicMock()

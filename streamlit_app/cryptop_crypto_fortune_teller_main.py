@@ -93,7 +93,7 @@ logo_path = "assets/logo.png"
 col1, col2, col3 = st.columns([1, 6, 1])
 with col2:
     try:
-        st.image(logo_path, width=150)
+        st.image(logo_path, width=150, alt="Crypto P's Fortune Teller Logo")
     except:
         st.write("🔮") # Fallback if image missing
     st.markdown("<h1 style='text-align: center; color: #FFD700; text-shadow: 0 0 10px #FF00FF;'>🎪 Crypto P's 🔮<br>Fortune Teller</h1>", unsafe_allow_html=True)
@@ -107,18 +107,19 @@ with st.spinner("Initializing Oracle..."):
     gainers, losers = get_top_gainers_losers(limit=10)
 
 if not gainers.empty:
-    ticker_items = []
-    for _, row in gainers.head(5).iterrows():
-        sym = row['symbol'].upper()
-        pct = row['price_change_percentage_24h']
-        color = "#00FF00" if pct > 0 else "#FF0000"
-        ticker_items.append(f"<span style='margin-right: 30px; font-weight: bold;'>🔥 {html.escape(str(sym))} <span style='color: {html.escape(str(color))}'>{html.escape(f'{pct:+.2f}%')}</span></span>")
+    # Optimization: Replaced itertuples with list comprehensions for speed
+    top_gainers = gainers.head(5)
+    gainer_items = [
+        f"<span style='margin-right: 30px; font-weight: bold;'>🔥 {html.escape(str(sym).upper())} <span style='color: {html.escape('#00FF00' if pct > 0 else '#FF0000')}'>{html.escape(f'{pct:+.2f}%')}</span></span>"
+        for sym, pct in zip(top_gainers['symbol'], top_gainers['price_change_percentage_24h'])
+    ]
 
-    for _, row in losers.head(5).iterrows():
-        sym = row['symbol'].upper()
-        pct = row['price_change_percentage_24h']
-        color = "#00FF00" if pct > 0 else "#FF0000"
-        ticker_items.append(f"<span style='margin-right: 30px; font-weight: bold;'>🧊 {html.escape(str(sym))} <span style='color: {html.escape(str(color))}'>{html.escape(f'{pct:+.2f}%')}</span></span>")
+    top_losers = losers.head(5)
+    loser_items = [
+        f"<span style='margin-right: 30px; font-weight: bold;'>🧊 {html.escape(str(sym).upper())} <span style='color: {html.escape('#00FF00' if pct > 0 else '#FF0000')}'>{html.escape(f'{pct:+.2f}%')}</span></span>"
+        for sym, pct in zip(top_losers['symbol'], top_losers['price_change_percentage_24h'])
+    ]
+    ticker_items = gainer_items + loser_items
 
     ticker_html = f"""
     <div style="width: 100%; overflow: hidden; background: linear-gradient(90deg, #150020, #2a0e3b, #150020); border-bottom: 2px solid #FF00FF; border-top: 2px solid #00FFFF; padding: 10px 0; margin-bottom: 20px;">
@@ -157,7 +158,7 @@ with st.sidebar:
         selected_option = st.selectbox("Select Cryptocurrency", options, index=0, help="Search and select the cryptocurrency you want to analyze.")
         coin_id = mapping[selected_option]
 
-        # 🛡️ Sentinel: Global Input Validation for coin_id
+        #Global Input Validation for coin_id
         if not validate_coin_id(coin_id):
             st.error("Invalid Asset ID detected. Please select a valid asset.")
             st.stop()
@@ -465,7 +466,7 @@ with tab2:
             if not vol_for_chart.empty:
                 # Merge to align dates
                 merged_vol = ohlc_df.join(vol_for_chart, how='left').fillna(0)
-                colors = ['green' if row['open'] - row['close'] >= 0 else 'red' for index, row in merged_vol.iterrows()]
+                colors = np.where(merged_vol['open'] - merged_vol['close'] >= 0, 'green', 'red')
                 fig_main.add_trace(go.Bar(
                     x=merged_vol.index, y=merged_vol['volume'], marker_color=colors, name='Volume'
                 ), row=2, col=1)
@@ -732,25 +733,32 @@ with tab5:
         total_val = 0
         total_cost = 0
 
-        p_ids = list(set([i['id'] for i in st.session_state.portfolio]))
+        p_ids = list({i['id'] for i in st.session_state.portfolio})
         curr_prices = get_current_price(p_ids)
 
-        for item in st.session_state.portfolio:
-            cid = item['id']
-            c_price = curr_prices.get(cid, {}).get('usd', 0) if curr_prices else 0
-            val = item['amount'] * c_price
-            cost = item['amount'] * item['buy_price']
-            pnl = val - cost
-            pnl_pct = (pnl / cost * 100) if cost > 0 else 0
+        # Optimization: Vectorized portfolio calculations
+        port_df_temp = pd.DataFrame(st.session_state.portfolio)
+        if not port_df_temp.empty:
+            prices_series = port_df_temp['id'].map(lambda cid: curr_prices.get(cid, {}).get('usd', 0) if curr_prices else 0)
+            amounts = port_df_temp['amount']
+            buy_prices = port_df_temp['buy_price']
 
-            total_val += val
-            total_cost += cost
+            vals = amounts * prices_series
+            costs = amounts * buy_prices
+            pnls = vals - costs
+            pnl_pcts = np.where(costs > 0, (pnls / costs * 100), 0.0)
 
-            port_data.append({
-                'Coin': item['name'], 'Amount': item['amount'],
-                'Price': c_price, 'Value': val,
-                'PnL ($)': pnl, 'PnL (%)': pnl_pct
-            })
+            total_val += vals.sum()
+            total_cost += costs.sum()
+
+            port_df_temp['Coin'] = port_df_temp['name']
+            port_df_temp['Amount'] = amounts
+            port_df_temp['Price'] = prices_series
+            port_df_temp['Value'] = vals
+            port_df_temp['PnL ($)'] = pnls
+            port_df_temp['PnL (%)'] = pnl_pcts
+
+            port_data = port_df_temp[['Coin', 'Amount', 'Price', 'Value', 'PnL ($)', 'PnL (%)']].to_dict('records')
 
         df_port = pd.DataFrame(port_data)
 
@@ -851,24 +859,24 @@ with tab5:
                 if st.button("Yes, Clear Everything", type="primary"):
                     st.session_state.portfolio = []
                     st.session_state.confirm_clear_portfolio = False
-                    st.experimental_rerun()
+                    st.rerun()
             with col_conf_no:
                 if st.button("Cancel"):
                     st.session_state.confirm_clear_portfolio = False
-                    st.experimental_rerun()
+                    st.rerun()
 
         # Future Wealth Projection
         st.markdown("---")
         st.subheader("🔮 Future Wealth Projection")
         st.write("Estimate the future value of your assets based on AI forecasts (30-day horizon).")
 
-        port_options = list(set([item['name'] for item in st.session_state.portfolio]))
+        port_options = list({item['name'] for item in st.session_state.portfolio})
         if port_options:
             selected_port_asset = st.selectbox("Select Asset to Project", port_options, key="port_forecast_select")
 
             # Find asset details (sum amount if multiple entries)
             # Simple approach: sum amount for this coin
-            total_amt = sum([i['amount'] for i in st.session_state.portfolio if i['name'] == selected_port_asset])
+            total_amt = sum(i['amount'] for i in st.session_state.portfolio if i['name'] == selected_port_asset)
             asset_id = next((i['id'] for i in st.session_state.portfolio if i['name'] == selected_port_asset), None)
 
             if asset_id and total_amt > 0:
@@ -1022,7 +1030,7 @@ with tab7:
         if st.button("Calculate Moon Price"):
             with st.spinner("Crunching the numbers..."):
                 try:
-                    # 🛡️ Sentinel: Input Validation for coin_id to prevent injection
+                    #Input Validation for coin_id to prevent injection
                     # (Redundant due to global check, but kept for defense in depth)
                     if not validate_coin_id(coin_id):
                          st.error("Invalid Asset ID.")
@@ -1234,12 +1242,12 @@ with tab9:
                 st.session_state.exchange_connected = False
                 exchange_client = ExchangeManager() # Reset the instance
                 get_exchange_vault.clear() # Clear cache for this resource
-                st.experimental_rerun()
+                st.rerun()
 
             # Balance
             st.write("#### 💰 Wallet Balance")
             if st.button("Refresh Balance"):
-                st.experimental_rerun()
+                st.rerun()
 
             bal_df, bal_err = exchange_client.get_balance()
             if bal_df is not None and not bal_df.empty:
@@ -1286,7 +1294,7 @@ with tab9:
             st.markdown("---")
             with st.expander("Open Orders"):
                 if st.button("Refresh Orders"):
-                    st.experimental_rerun()
+                    st.rerun()
                 orders_df, ord_err = exchange_client.fetch_open_orders(t_symbol)
                 if orders_df is not None and not orders_df.empty:
                     st.dataframe(orders_df)
@@ -1405,7 +1413,7 @@ with tab9:
                     else: st.error(msg)
             with col_c3:
                 if st.button("🔄 Refresh Status"):
-                    st.experimental_rerun()
+                    st.rerun()
 
             # Status Dashboard
             status, err = client.get_status()
