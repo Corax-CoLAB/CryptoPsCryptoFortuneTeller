@@ -739,7 +739,7 @@ with tab5:
         # Optimization: Vectorized portfolio calculations
         port_df_temp = pd.DataFrame(st.session_state.portfolio)
         if not port_df_temp.empty:
-            prices_series = port_df_temp['id'].map(lambda cid: curr_prices.get(cid, {}).get('usd', 0) if curr_prices else 0)
+            prices_series = port_df_temp['id'].map(curr_prices).map(lambda x: x.get('usd', 0) if isinstance(x, dict) else 0) if curr_prices else pd.Series(0, index=port_df_temp.index)
             amounts = port_df_temp['amount']
             buy_prices = port_df_temp['buy_price']
 
@@ -1488,9 +1488,16 @@ with tab10:
             with st.spinner("Analyzing news headlines..."):
                 news_df = get_crypto_news_sentiment()
                 if not news_df.empty:
+
+                    def style_sentiment(x):
+                        x_str = str(x)
+                        if 'Bullish' in x_str: return 'color: lime'
+                        if 'Bearish' in x_str: return 'color: red'
+                        return 'color: gray'
+
                     st.dataframe(
                         news_df.style.map(
-                            lambda x: 'color: lime' if 'Bullish' in str(x) else ('color: red' if 'Bearish' in str(x) else 'color: gray'),
+                            style_sentiment,
                             subset=['Sentiment']
                         ),
                         use_container_width=True
@@ -1509,9 +1516,14 @@ with tab10:
                 # Call it from the helper module (it is defined there)
                 arb_df = get_exchange_arbitrage(arb_pair)
                 if not arb_df.empty:
+
+                    def style_arbitrage(x):
+                        if 'Yes' in str(x): return 'color: lime; font-weight: bold'
+                        return ''
+
                     st.dataframe(
                         arb_df.style.map(
-                            lambda x: 'color: lime; font-weight: bold' if 'Yes' in str(x) else '',
+                            style_arbitrage,
                             subset=['Arbitrage']
                         ),
                         use_container_width=True
@@ -1529,7 +1541,7 @@ with tab10:
             with st.spinner(f"Analyzing {tok_coin} tokenomics..."):
                 tok_df = get_tokenomics_data(tok_coin)
                 if not tok_df.empty:
-                    st.table(tok_df)
+                    st.dataframe(tok_df, use_container_width=True)
                 else:
                     st.error("Failed to retrieve tokenomics data.")
 
