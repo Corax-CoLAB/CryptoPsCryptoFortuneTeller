@@ -739,7 +739,7 @@ with tab5:
         # Optimization: Vectorized portfolio calculations
         port_df_temp = pd.DataFrame(st.session_state.portfolio)
         if not port_df_temp.empty:
-            prices_series = port_df_temp['id'].map(lambda cid: curr_prices.get(cid, {}).get('usd', 0) if curr_prices else 0)
+            prices_series = port_df_temp['id'].map(curr_prices).map(lambda x: x.get('usd', 0) if isinstance(x, dict) else 0) if curr_prices else pd.Series(0, index=port_df_temp.index)
             amounts = port_df_temp['amount']
             buy_prices = port_df_temp['buy_price']
 
@@ -1541,7 +1541,7 @@ with tab10:
             with st.spinner(f"Analyzing {tok_coin} tokenomics..."):
                 tok_df = get_tokenomics_data(tok_coin)
                 if not tok_df.empty:
-                    st.table(tok_df)
+                    st.dataframe(tok_df, use_container_width=True)
                 else:
                     st.error("Failed to retrieve tokenomics data.")
 

@@ -666,10 +666,20 @@ def calculate_adx(df, period=14):
     # TR
     tr = compute_volatility(df, window=1)['ATR'] # ATR with window 1 is basically TR (if correctly implemented)
     # Actually, let's recalculate TR explicitly to be safe and avoid circular dep issues on windowing
-    h = df['high']
-    l = df['low']
-    c = df['close'].shift(1)
-    tr = pd.concat([h - l, (h - c).abs(), (l - c).abs()], axis=1).max(axis=1)
+    h = df['high'].values.astype(float)
+    l = df['low'].values.astype(float)
+    c = df['close'].values.astype(float)
+
+    prev_c = np.empty_like(c)
+    prev_c[1:] = c[:-1]
+    prev_c[0] = np.nan
+
+    hl = h - l
+    h_pc = np.abs(h - prev_c)
+    l_pc = np.abs(l - prev_c)
+
+    tr_vals = np.fmax(hl, np.fmax(h_pc, l_pc))
+    tr = pd.Series(tr_vals, index=df.index)
 
     # Smooth TR, +DM, -DM
     tr_smooth = tr.rolling(period).sum()
