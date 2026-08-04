@@ -130,9 +130,7 @@ def get_prophet_config(model_name, overrides=None):
     # Apply overrides if provided
     if overrides:
         # Only override keys that are explicitly set in overrides
-        for k, v in overrides.items():
-            if v is not None:
-                config[k] = v
+        config.update({k: v for k, v in overrides.items() if v is not None})
 
     return config
 
