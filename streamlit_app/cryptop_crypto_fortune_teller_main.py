@@ -1488,9 +1488,16 @@ with tab10:
             with st.spinner("Analyzing news headlines..."):
                 news_df = get_crypto_news_sentiment()
                 if not news_df.empty:
+
+                    def style_sentiment(x):
+                        x_str = str(x)
+                        if 'Bullish' in x_str: return 'color: lime'
+                        if 'Bearish' in x_str: return 'color: red'
+                        return 'color: gray'
+
                     st.dataframe(
                         news_df.style.map(
-                            lambda x: 'color: lime' if 'Bullish' in str(x) else ('color: red' if 'Bearish' in str(x) else 'color: gray'),
+                            style_sentiment,
                             subset=['Sentiment']
                         ),
                         use_container_width=True
@@ -1509,9 +1516,14 @@ with tab10:
                 # Call it from the helper module (it is defined there)
                 arb_df = get_exchange_arbitrage(arb_pair)
                 if not arb_df.empty:
+
+                    def style_arbitrage(x):
+                        if 'Yes' in str(x): return 'color: lime; font-weight: bold'
+                        return ''
+
                     st.dataframe(
                         arb_df.style.map(
-                            lambda x: 'color: lime; font-weight: bold' if 'Yes' in str(x) else '',
+                            style_arbitrage,
                             subset=['Arbitrage']
                         ),
                         use_container_width=True
