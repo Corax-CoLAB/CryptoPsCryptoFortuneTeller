@@ -30,7 +30,8 @@ def get_best_arima(series, max_p=3, max_q=3, d=1):
     for p, q in itertools.product(range(max_p+1), range(max_q+1)):
         try:
             model = ARIMA(series, order=(p, d, q))
-            results = model.fit()
+            # optimization: don't compute full covariance/hessian during grid search
+            results = model.fit(method='statespace', low_memory=True, cov_type='none')
             if results.aic < best_aic:
                 best_aic = results.aic
                 best_order = (p, d, q)
