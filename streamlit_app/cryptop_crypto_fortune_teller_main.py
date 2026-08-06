@@ -739,7 +739,12 @@ with tab5:
         # Optimization: Vectorized portfolio calculations
         port_df_temp = pd.DataFrame(st.session_state.portfolio)
         if not port_df_temp.empty:
-            prices_series = port_df_temp['id'].map(curr_prices).map(lambda x: x.get('usd', 0) if isinstance(x, dict) else 0) if curr_prices else pd.Series(0, index=port_df_temp.index)
+            if curr_prices:
+                # Extract 'usd' values from curr_prices dicts efficiently without lambda
+                prices_series = pd.Series([curr_prices.get(i, {}).get('usd', 0) for i in port_df_temp['id']], index=port_df_temp.index)
+            else:
+                prices_series = pd.Series(0, index=port_df_temp.index)
+
             amounts = port_df_temp['amount']
             buy_prices = port_df_temp['buy_price']
 
