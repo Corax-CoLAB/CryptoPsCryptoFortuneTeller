@@ -923,11 +923,13 @@ def calculate_vwap(df):
     if 'volume' not in df:
          return pd.Series(dtype=float)
 
-    vp = tp * df['volume']
+    # Fill NA volumes if timestamps didn't perfectly align
+    vol_filled = df['volume'].ffill().fillna(0)
+    vp = tp * vol_filled
 
     # Rolling 20-day VWAP
     cum_vp = vp.rolling(20).sum()
-    cum_vol = df['volume'].rolling(20).sum()
+    cum_vol = vol_filled.rolling(20).sum()
 
     vwap = cum_vp / cum_vol
     return vwap
