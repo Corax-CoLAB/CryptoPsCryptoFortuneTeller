@@ -804,7 +804,7 @@ def calculate_ichimoku_cloud(df):
     Calculate Ichimoku Cloud components.
     Requires 'high', 'low' columns.
     """
-    if not all(col in df.columns for col in ['high', 'low']):
+    if not all(col in df.columns for col in ['high', 'low', 'close']):
         return pd.DataFrame()
 
     # Conversion Line (Tenkan-sen): (9-period high + 9-period low) / 2

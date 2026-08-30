@@ -7,6 +7,7 @@ Description:
 - Improved security of `ExchangeManager` and `FreqtradeManager` by storing credentials using private attributes, masking sensitive information in `__repr__` and `__str__`, and stripping tokens and passwords during `__getstate__`.
 - Validated no remaining mock-ups or placeholders are used, retaining purposeful stochastic simulations.
 - Fixed NumPy version compatibility in `requirements.txt` to strictly use `<2.0.0` to avoid build breakages across multiple Python versions (3.11/3.12).
+- Fixed `calculate_ichimoku_cloud` column requirement check to explicitly verify the presence of the `close` column.
 
 **Why:**
 - To improve frontend/backend performance via vectorization, enhance data security, and resolve anti-patterns (such as swallowing exceptions or insecure session serialization).
