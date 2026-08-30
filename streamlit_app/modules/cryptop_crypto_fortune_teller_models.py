@@ -35,7 +35,8 @@ def get_best_arima(series, max_p=3, max_q=3, d=1):
             if results.aic < best_aic:
                 best_aic = results.aic
                 best_order = (p, d, q)
-        except:
+        except Exception:
+            logging.error("ARIMA model fitting failed", exc_info=True)
             continue
     return best_order
 
@@ -97,6 +98,7 @@ def auto_tune_prophet(df, param_grid=None):
                 best_rmse = rmse
                 best_params = params
         except Exception:
+            logging.error("Prophet model fitting failed", exc_info=True)
             continue
 
     return best_params
@@ -252,7 +254,7 @@ def forecast_arima(df, periods=30):
 
         return forecast_df
     except Exception as e:
-        # st.error(f"ARIMA model failed: {e}")
+        logging.error(f"ARIMA model failed: {e}", exc_info=True)
         return pd.DataFrame(columns=['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
 
 @st.cache_data(ttl=3600)
@@ -299,7 +301,7 @@ def forecast_sarima(df, periods=30):
 
         return forecast_df
     except Exception as e:
-        # st.error(f"SARIMA model failed: {e}")
+        logging.error(f"SARIMA model failed: {e}", exc_info=True)
         return pd.DataFrame(columns=['ds', 'yhat', 'yhat_lower', 'yhat_upper'])
 
 @st.cache_data(ttl=3600)

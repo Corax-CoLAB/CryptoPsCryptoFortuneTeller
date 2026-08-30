@@ -804,7 +804,7 @@ def calculate_ichimoku_cloud(df):
     Calculate Ichimoku Cloud components.
     Requires 'high', 'low' columns.
     """
-    if not all(col in df.columns for col in ['high', 'low']):
+    if not all(col in df.columns for col in ['high', 'low', 'close']):
         return pd.DataFrame()
 
     # Conversion Line (Tenkan-sen): (9-period high + 9-period low) / 2
@@ -923,11 +923,13 @@ def calculate_vwap(df):
     if 'volume' not in df:
          return pd.Series(dtype=float)
 
-    vp = tp * df['volume']
+    # Fill NA volumes if timestamps didn't perfectly align
+    vol_filled = df['volume'].ffill().fillna(0)
+    vp = tp * vol_filled
 
     # Rolling 20-day VWAP
     cum_vp = vp.rolling(20).sum()
-    cum_vol = df['volume'].rolling(20).sum()
+    cum_vol = vol_filled.rolling(20).sum()
 
     vwap = cum_vp / cum_vol
     return vwap
@@ -1111,6 +1113,7 @@ def get_exchange_arbitrage(symbol_str):
         symbol += '/USDT' # Default to USDT pair if not specified
 
     def fetch_ticker(ex_name):
+        import logging
         try:
             import ccxt
             exchange_class = getattr(ccxt, ex_name)
@@ -1124,6 +1127,7 @@ def get_exchange_arbitrage(symbol_str):
                 'Volume 24h': ticker.get('baseVolume', 0)
             }
         except Exception:
+            logging.error("Failed to fetch ticker", exc_info=True)
             return None
 
     import concurrent.futures
@@ -1246,6 +1250,7 @@ def get_historical_volume(coin_id, days=30):
         df.set_index('date', inplace=True)
         return df[['volume']]
     except Exception:
+        logging.error("Failed to get total volume", exc_info=True)
         return pd.DataFrame()
 
 @st.cache_data(ttl=3600)
@@ -1312,7 +1317,6 @@ def get_defi_yields(limit=20):
             df['apy'] = [f"{x:.2f}%" if pd.notnull(x) else "N/A" for x in df['apy']]
             return df
     except Exception as e:
-        import logging
         logging.error(f"Error fetching DeFi yields: {e}", exc_info=True)
     return pd.DataFrame()
 
@@ -1334,7 +1338,6 @@ def get_whale_alerts(coin_id="bitcoin"):
             whales['volume'] = [f"${x:,.0f}" for x in whales['volume']]
             return whales[['timestamp', 'volume']].sort_values(by='timestamp', ascending=False)
     except Exception as e:
-        import logging
         logging.error(f"Error fetching whale alerts: {e}", exc_info=True)
     return pd.DataFrame()
 
@@ -1373,7 +1376,6 @@ def get_crypto_news_sentiment(limit=10):
         news_data = [process_news_item(item) for item in data]
         return pd.DataFrame(news_data)
     except Exception as e:
-        import logging
         logging.error(f"Error fetching news sentiment: {e}", exc_info=True)
     return pd.DataFrame()
 
@@ -1395,6 +1397,5 @@ def get_tokenomics_data(coin_id):
         }
         return pd.DataFrame(list(tokenomics.items()), columns=['Metric', 'Value'])
     except Exception as e:
-        import logging
         logging.error(f"Error fetching tokenomics: {e}", exc_info=True)
     return pd.DataFrame()

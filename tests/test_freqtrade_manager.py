@@ -17,7 +17,7 @@ class TestFreqtradeManager(unittest.TestCase):
         success, msg = self.manager.login()
 
         self.assertTrue(success)
-        self.assertEqual(self.manager.access_token, "fake_token")
+        self.assertEqual(self.manager._access_token, "fake_token")
 
     @patch('modules.freqtrade_manager.requests.post')
     def test_login_failure(self, mock_post):
@@ -34,7 +34,7 @@ class TestFreqtradeManager(unittest.TestCase):
 
     @patch('modules.freqtrade_manager.requests.get')
     def test_get_status_success(self, mock_get):
-        self.manager.access_token = "fake_token"
+        self.manager._access_token = "fake_token"
 
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -48,7 +48,7 @@ class TestFreqtradeManager(unittest.TestCase):
 
     @patch('modules.freqtrade_manager.requests.post')
     def test_start_bot_success(self, mock_post):
-        self.manager.access_token = "fake_token"
+        self.manager._access_token = "fake_token"
 
         mock_response = MagicMock()
         mock_response.status_code = 200
