@@ -14,6 +14,13 @@ class ExchangeManager:
     def __str__(self):
         return self.__repr__()
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Remove sensitive credentials from the exchange instance if possible
+        if 'exchange' in state and state['exchange']:
+            state['exchange'] = 'Exchange object hidden'
+        return state
+
     def connect(self, exchange_id, api_key, api_secret, password=None):
         """
         Connect to an exchange using CCXT.
@@ -109,19 +116,17 @@ class ExchangeManager:
                 return pd.DataFrame(), None
 
             # Simplify for display
-            simple_orders = []
-            for o in orders:
-                simple_orders.append({
-                    'id': o['id'],
-                    'datetime': o['datetime'],
-                    'symbol': o['symbol'],
-                    'type': o['type'],
-                    'side': o['side'],
-                    'price': o['price'],
-                    'amount': o['amount'],
-                    'filled': o['filled'],
-                    'status': o['status']
-                })
+            simple_orders = [{
+                'id': o['id'],
+                'datetime': o['datetime'],
+                'symbol': o['symbol'],
+                'type': o['type'],
+                'side': o['side'],
+                'price': o['price'],
+                'amount': o['amount'],
+                'filled': o['filled'],
+                'status': o['status']
+            } for o in orders]
 
             return pd.DataFrame(simple_orders), None
         except Exception as e:
