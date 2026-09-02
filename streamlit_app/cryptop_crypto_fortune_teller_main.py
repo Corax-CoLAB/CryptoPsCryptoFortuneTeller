@@ -1237,7 +1237,8 @@ with tab9:
                     if success:
                         st.session_state.exchange_connected = True
                         st.session_state.connected_exchange_name = ex_name
-                        st.success(msg)
+                        st.toast(msg, icon="✅")
+                            st.success(msg)
                     else:
                         st.error(msg)
 
@@ -1396,6 +1397,7 @@ with tab9:
                         if success:
                             ft_vault['client'] = client
                             st.session_state.ft_connected = True
+                            st.toast(msg, icon="✅")
                             st.success(msg)
                         else:
                             st.error(msg)
@@ -1410,7 +1412,8 @@ with tab9:
             with col_c1:
                 if st.button("▶️ Start Bot"):
                     res, msg = client.start_bot()
-                    if res: st.success(msg)
+                    if res: st.toast(msg, icon="✅")
+                            st.success(msg)
                     else: st.error(msg)
             with col_c2:
                 if st.button("⏹️ Stop Bot"):
